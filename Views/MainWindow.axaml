@@ -1,0 +1,243 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Mermaider.ViewModels"
+        xmlns:models="using:Mermaider.Models"
+        xmlns:controls="using:Avalonia.Controls"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:avaloniaEdit="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+        x:Class="Mermaider.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        x:Name="root"
+        Title="Mermaider - Mermaid 图表编辑器"
+        Icon="/Assets/mermaider32.ico"
+        Width="1200" Height="800"
+        MinWidth="800" MinHeight="600"
+        Closed="OnClosed">
+
+    <Design.DataContext>
+        <vm:MainViewModel/>
+    </Design.DataContext>
+
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Ctrl+N" Command="{Binding NewFileCommand}"/>
+        <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenFileCommand}"/>
+        <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveFileCommand}"/>
+        <KeyBinding Gesture="Ctrl+Shift+S" Command="{Binding SaveFileAsCommand}"/>
+        <KeyBinding Gesture="Ctrl+W" Command="{Binding CloseCurrentTabCommand}"/>
+        <KeyBinding Gesture="Ctrl+Q" Command="{Binding ExitCommand}"/>
+        <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}"/>
+        <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}"/>
+        <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding RedoCommand}"/>
+        <KeyBinding Gesture="Ctrl+X" Command="{Binding CutCommand}"/>
+        <KeyBinding Gesture="Ctrl+C" Command="{Binding CopyCommand}"/>
+        <KeyBinding Gesture="Ctrl+V" Command="{Binding PasteCommand}"/>
+        <KeyBinding Gesture="Ctrl+A" Command="{Binding SelectAllCommand}"/>
+        <KeyBinding Gesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}"/>
+        <KeyBinding Gesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}"/>
+        <KeyBinding Gesture="Ctrl+D0" Command="{Binding ResetZoomCommand}"/>
+    </Window.KeyBindings>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <Menu Grid.Row="0">
+            <MenuItem Header="文件(_F)">
+                <MenuItem Header="新建(_N)" InputGesture="Ctrl+N" Command="{Binding NewFileCommand}"/>
+                <MenuItem Header="打开(_O)..." InputGesture="Ctrl+O" Command="{Binding OpenFileCommand}"/>
+                <MenuItem Header="最近打开(_R)" IsEnabled="{Binding HasRecentFiles}"
+                          ItemsSource="{Binding RecentFiles}">
+                    <MenuItem.ItemTemplate>
+                        <DataTemplate x:DataType="models:RecentFileItem">
+                            <MenuItem Header="{Binding FileName}" 
+                                      ToolTip.Tip="{Binding FilePath}"
+                                      Command="{Binding $parent[Menu].((vm:MainViewModel)DataContext).OpenRecentFileCommand}"
+                                      CommandParameter="{Binding}"/>
+                        </DataTemplate>
+                    </MenuItem.ItemTemplate>
+                </MenuItem>
+                <Separator/>
+                <MenuItem Header="保存(_S)" InputGesture="Ctrl+S" Command="{Binding SaveFileCommand}"/>
+                <MenuItem Header="另存为(_A)..." InputGesture="Ctrl+Shift+S" Command="{Binding SaveFileAsCommand}"/>
+                <Separator/>
+                <MenuItem Header="关闭当前标签(_W)" InputGesture="Ctrl+W" Command="{Binding CloseCurrentTabCommand}"/>
+                <Separator/>
+                <MenuItem Header="退出(_X)" InputGesture="Ctrl+Q" Command="{Binding ExitCommand}"/>
+            </MenuItem>
+            <MenuItem Header="编辑(_E)">
+                <MenuItem Header="撤销(_U)" InputGesture="Ctrl+Z" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndoAction}"/>
+                <MenuItem Header="重做(_R)" InputGesture="Ctrl+Y" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedoAction}"/>
+                <Separator/>
+                <MenuItem Header="剪切(_X)" InputGesture="Ctrl+X" Command="{Binding CutCommand}" IsEnabled="{Binding CanCutAction}"/>
+                <MenuItem Header="复制(_C)" InputGesture="Ctrl+C" Command="{Binding CopyCommand}" IsEnabled="{Binding CanCopyAction}"/>
+                <MenuItem Header="粘贴(_V)" InputGesture="Ctrl+V" Command="{Binding PasteCommand}" IsEnabled="{Binding CanPasteAction}"/>
+                <MenuItem Header="全选(_A)" InputGesture="Ctrl+A" Command="{Binding SelectAllCommand}" IsEnabled="{Binding CanSelectAllAction}"/>
+            </MenuItem>
+            <MenuItem Header="视图(_V)">
+                <MenuItem Header="放大(_I)" InputGesture="Ctrl++" Command="{Binding ZoomInCommand}"/>
+                <MenuItem Header="缩小(_O)" InputGesture="Ctrl+-" Command="{Binding ZoomOutCommand}"/>
+                <MenuItem Header="重置缩放(_R)" InputGesture="Ctrl+0" Command="{Binding ResetZoomCommand}"/>
+            </MenuItem>
+            <MenuItem Header="帮助(_H)">
+                <MenuItem Header="关于(_A)..." Command="{Binding AboutCommand}"/>
+            </MenuItem>
+        </Menu>
+
+        <Grid Grid.Row="1" RowDefinitions="Auto,*">
+            <!-- 标签页头部 -->
+            <Border Grid.Row="0" Background="#F0F0F0" BorderBrush="#CCCCCC" BorderThickness="0,0,0,1">
+                <StackPanel Orientation="Horizontal">
+                    <ItemsControl ItemsSource="{Binding Tabs}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="models:TabItem">
+                                <Border Background="{Binding IsSelected, Converter={x:Static vm:MainViewModel.TabBackgroundConverter}}"
+                                        BorderBrush="#CCCCCC" BorderThickness="1,1,1,0"
+                                        CornerRadius="4,4,0,0"
+                                        Padding="10,5"
+                                        Margin="2,0,-1,0"
+                                        PointerPressed="OnTabPointerPressed"
+                                        Cursor="Hand">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Title}" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                   Foreground="#333333"
+                                                   FontWeight="{Binding IsSelected, Converter={x:Static vm:MainViewModel.TabFontWeightConverter}}"/>
+                                        <Button Content="x" 
+                                                Width="18" Height="18"
+                                                Padding="0"
+                                                FontSize="12"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                HorizontalContentAlignment="Center"
+                                                VerticalContentAlignment="Center"
+                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).CloseTabCommand}"
+                                                CommandParameter="{Binding}"
+                                                ClickMode="Release"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    
+                    <!-- 添加标签按钮 -->
+                    <Button Content="+" 
+                            Width="28" Height="28"
+                            Margin="5,0,0,0"
+                            FontSize="16"
+                            FontWeight="Bold"
+                            Padding="0"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            Command="{Binding AddNewTabCommand}"
+                            ToolTip.Tip="新建标签页 (Ctrl+N)"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 标签内容 - 直接绑定到 CurrentTab -->
+            <Border Grid.Row="1" Background="#FFFFFF">
+                <Grid ColumnDefinitions="Auto,Auto,*" SizeChanged="OnWorkspaceSizeChanged">
+                    <!-- 代码编辑器区域 - 使用 AvaloniaEdit -->
+                    <Border Grid.Column="0" Background="#FFFFFF" Width="{Binding EditorPanelWidth}" MinWidth="320">
+                        <avaloniaEdit:TextEditor x:Name="CodeEditor"
+                                                 Document="{Binding #root.DataContext.CurrentTab.Document}"
+                                                 SyntaxHighlighting="{Binding MermaidHighlighting}"
+                                                 FontFamily="JetBrains Mono,Cascadia Code,Fira Code,Consolas,Menlo,Monaco,monospace"
+                                                 FontSize="14"
+                                                 Background="#FFFFFF"
+                                                 Foreground="#333333"
+                                                 BorderThickness="0"
+                                                 ShowLineNumbers="True"
+                                                 HorizontalScrollBarVisibility="Auto"
+                                                 VerticalScrollBarVisibility="Auto"/>
+                    </Border>
+
+                    <Border Grid.Column="1" Width="5" Background="#E0E0E0"/>
+
+                    <Border Grid.Column="2" Background="#F8F8F8" MinWidth="360">
+                        <Grid>
+                            <ScrollViewer x:Name="PreviewScrollViewer"
+                                          HorizontalScrollBarVisibility="Auto" 
+                                          VerticalScrollBarVisibility="Auto"
+                                          Background="#F8F8F8"
+                                          PointerWheelChanged="OnPreviewPointerWheelChanged"
+                                          SizeChanged="OnPreviewViewportSizeChanged">
+                                <Grid Margin="16"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center">
+                                    <controls:LayoutTransformControl>
+                                        <controls:LayoutTransformControl.LayoutTransform>
+                                            <ScaleTransform ScaleX="{Binding PreviewDisplayScale}"
+                                                            ScaleY="{Binding PreviewDisplayScale}"/>
+                                        </controls:LayoutTransformControl.LayoutTransform>
+                                        <Border Background="White"
+                                                BorderBrush="#DDDDDD"
+                                                BorderThickness="1"
+                                                Padding="8"
+                                                BoxShadow="0 4 12 0 #18000000">
+                                            <Image x:Name="PreviewImageControl"
+                                                   Source="{Binding #root.DataContext.CurrentTab.PreviewImage}"
+                                                   Stretch="None"/>
+                                        </Border>
+                                    </controls:LayoutTransformControl>
+
+                                    <TextBlock Text="{Binding #root.DataContext.CurrentTab.ErrorMessage}"
+                                               IsVisible="{Binding #root.DataContext.CurrentTab.HasError}"
+                                               Foreground="#CC0000"
+                                               Background="#FFF2F2"
+                                               Padding="10"
+                                               TextWrapping="Wrap"
+                                               MaxWidth="420"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Top"/>
+                                </Grid>
+                            </ScrollViewer>
+
+                            <Border HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Margin="12"
+                                    Background="#EFFFFFFF"
+                                    CornerRadius="18"
+                                    Padding="6">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Button Width="32"
+                                            Height="32"
+                                            Padding="0"
+                                            Command="{Binding CopyImageCommand}"
+                                            ToolTip.Tip="复制预览图">
+                                        <Path Width="15"
+                                              Height="15"
+                                              Stretch="Uniform"
+                                              Fill="#444444"
+                                              Data="M5,2 H13 A2,2 0 0 1 15,4 V12 H13 V4 H5 Z M2,5 H10 A2,2 0 0 1 12,7 V15 A2,2 0 0 1 10,17 H4 A2,2 0 0 1 2,15 Z"/>
+                                    </Button>
+                                    <Button Width="32"
+                                            Height="32"
+                                            Padding="0"
+                                            Command="{Binding SaveImageCommand}"
+                                            ToolTip.Tip="保存预览图">
+                                        <Path Width="15"
+                                              Height="15"
+                                              Stretch="Uniform"
+                                              Fill="#444444"
+                                              Data="M3,2 H13 L16,5 V16 H3 Z M5,2 V7 H11 V2 M6,16 V11 H13 V16 Z"/>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 状态栏 -->
+        <Border Grid.Row="2" Background="#F0F0F0" BorderBrush="#CCCCCC" BorderThickness="0,1,0,0" Padding="5,2">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" Foreground="#666666" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="2" Text="{Binding ZoomText}" Foreground="#666666" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
