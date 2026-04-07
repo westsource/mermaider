@@ -165,43 +165,43 @@
                               PointerMoved="OnPreviewPointerMoved"
                               PointerReleased="OnPreviewPointerReleased"
                               PointerWheelChanged="OnPreviewPointerWheelChanged"
+                              SizeChanged="OnPreviewViewportSizeChanged"
                               ClipToBounds="True">
-                            <ScrollViewer x:Name="PreviewScrollViewer"
-                                          HorizontalScrollBarVisibility="Disabled" 
-                                          VerticalScrollBarVisibility="Disabled"
-                                          Background="#F8F8F8"
-                                          SizeChanged="OnPreviewViewportSizeChanged">
-                                <Grid Margin="16"
-                                      HorizontalAlignment="Center"
-                                      VerticalAlignment="Center">
-                                    <controls:LayoutTransformControl x:Name="PreviewTransformControl">
-                                        <controls:LayoutTransformControl.LayoutTransform>
-                                            <ScaleTransform ScaleX="{Binding PreviewDisplayScale}"
-                                                            ScaleY="{Binding PreviewDisplayScale}"/>
-                                        </controls:LayoutTransformControl.LayoutTransform>
-                                        <Border x:Name="PreviewImageBorder"
-                                                Background="White"
-                                                BorderBrush="#DDDDDD"
-                                                BorderThickness="1"
-                                                Padding="8"
-                                                BoxShadow="0 4 12 0 #18000000">
-                                            <Image x:Name="PreviewImageControl"
-                                                   Source="{Binding #root.DataContext.CurrentTab.PreviewImage}"
-                                                   Stretch="None"/>
-                                        </Border>
-                                    </controls:LayoutTransformControl>
+                            <Grid x:Name="PreviewContentGrid"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center">
+                                <controls:LayoutTransformControl x:Name="PreviewTransformControl"
+                                                                 HorizontalAlignment="Center"
+                                                                 VerticalAlignment="Center">
+                                    <controls:LayoutTransformControl.LayoutTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform ScaleX="{Binding #root.DataContext.PreviewDisplayScale}"
+                                                            ScaleY="{Binding #root.DataContext.PreviewDisplayScale}"/>
+                                            <TranslateTransform/>
+                                        </TransformGroup>
+                                    </controls:LayoutTransformControl.LayoutTransform>
+                                    <Border x:Name="PreviewImageBorder"
+                                            Background="White"
+                                            BorderBrush="#DDDDDD"
+                                            BorderThickness="1"
+                                            Padding="8"
+                                            BoxShadow="0 4 12 0 #18000000">
+                                        <Image x:Name="PreviewImageControl"
+                                               Source="{Binding #root.DataContext.CurrentTab.PreviewImage}"
+                                               Stretch="None"/>
+                                    </Border>
+                                </controls:LayoutTransformControl>
 
-                                    <TextBlock Text="{Binding #root.DataContext.CurrentTab.ErrorMessage}"
-                                               IsVisible="{Binding #root.DataContext.CurrentTab.HasError}"
-                                               Foreground="#CC0000"
-                                               Background="#FFF2F2"
-                                               Padding="10"
-                                               TextWrapping="Wrap"
-                                               MaxWidth="420"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Top"/>
-                                </Grid>
-                            </ScrollViewer>
+                                <TextBlock Text="{Binding #root.DataContext.CurrentTab.ErrorMessage}"
+                                           IsVisible="{Binding #root.DataContext.CurrentTab.HasError}"
+                                           Foreground="#CC0000"
+                                           Background="#FFF2F2"
+                                           Padding="10"
+                                           TextWrapping="Wrap"
+                                           MaxWidth="420"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Top"/>
+                            </Grid>
 
                             <Border HorizontalAlignment="Right"
                                     VerticalAlignment="Top"

@@ -14,13 +14,14 @@ namespace Mermaider.Views;
 public partial class MainWindow : Window
 {
     private TextEditor? _codeEditor;
-    private ScrollViewer? _previewScrollViewer;
     private Image? _previewImage;
     private MainViewModel? _viewModel;
     private Grid? _workspaceGrid;
     private Border? _splitterBorder;
     private Grid? _previewGrid;
     private Border? _previewImageBorder;
+    private LayoutTransformControl? _previewTransformControl;
+    private Grid? _previewContentGrid;
     private TranslateTransform? _previewTranslateTransform;
 
     private bool _isDraggingSplitter;
@@ -32,6 +33,10 @@ public partial class MainWindow : Window
     private const double MinEditorWidth = 320;
     private const double MaxEditorWidth = 860;
     private const double MinPreviewWidth = 360;
+
+    private const double ZoomStep = 0.1;
+    private const double MinZoom = 0.1;
+    private const double MaxZoom = 5.0;
 
     public MainWindow()
     {
@@ -48,16 +53,24 @@ public partial class MainWindow : Window
     private void AttachPreviewHandlers()
     {
         _codeEditor = this.FindControl<TextEditor>("CodeEditor");
-        _previewScrollViewer = this.FindControl<ScrollViewer>("PreviewScrollViewer");
         _previewImage = this.FindControl<Image>("PreviewImageControl");
         _workspaceGrid = this.FindControl<Grid>("WorkspaceGrid");
         _splitterBorder = this.FindControl<Border>("SplitterBorder");
         _previewGrid = this.FindControl<Grid>("PreviewGrid");
         _previewImageBorder = this.FindControl<Border>("PreviewImageBorder");
-        _previewTranslateTransform = new TranslateTransform();
-        if (_previewImageBorder != null)
+        _previewTransformControl = this.FindControl<LayoutTransformControl>("PreviewTransformControl");
+        _previewContentGrid = this.FindControl<Grid>("PreviewContentGrid");
+
+        if (_previewTransformControl?.LayoutTransform is TransformGroup transformGroup)
         {
-            _previewImageBorder.RenderTransform = _previewTranslateTransform;
+            foreach (var transform in transformGroup.Children)
+            {
+                if (transform is TranslateTransform translateTransform)
+                {
+                    _previewTranslateTransform = translateTransform;
+                    break;
+                }
+            }
         }
 
         if (_codeEditor != null)
@@ -79,8 +92,11 @@ public partial class MainWindow : Window
             {
                 if (e.Property.Name == nameof(Image.Source))
                 {
-                    ResetPreviewOffset();
-                    UpdatePreviewFitScale();
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        ResetPreviewOffset();
+                        UpdatePreviewFitScale();
+                    }, DispatcherPriority.Background);
                 }
             };
         }
@@ -120,7 +136,11 @@ public partial class MainWindow : Window
         if (e.PropertyName is nameof(MainViewModel.CurrentTab) or nameof(MainViewModel.SelectedTabIndex))
         {
             Dispatcher.UIThread.Post(RefreshEditorState, DispatcherPriority.Background);
-            ResetPreviewOffset();
+            Dispatcher.UIThread.Post(() =>
+            {
+                ResetPreviewOffset();
+                UpdatePreviewFitScale();
+            }, DispatcherPriority.Background);
         }
     }
 
@@ -181,7 +201,7 @@ public partial class MainWindow : Window
 
     private void OnPreviewPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (e.GetCurrentPoint(_previewGrid).Properties.IsLeftButtonPressed && _previewImageBorder != null)
+        if (e.GetCurrentPoint(_previewGrid).Properties.IsLeftButtonPressed)
         {
             _isDraggingPreview = true;
             _previewDragStart = e.GetPosition(_previewGrid);
@@ -221,18 +241,44 @@ public partial class MainWindow : Window
 
     private void OnPreviewPointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && DataContext is MainViewModel viewModel)
+        if (DataContext is not MainViewModel viewModel || _previewTranslateTransform == null || _previewGrid == null)
+            return;
+
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
         {
+            var mousePos = e.GetPosition(_previewGrid);
+            var viewportCenter = new Point(_previewGrid.Bounds.Width / 2, _previewGrid.Bounds.Height / 2);
+            var zoomCenter = mousePos;
+
+            var oldZoom = viewModel.PreviewZoom;
+            double newZoom;
+
             if (e.Delta.Y > 0)
             {
-                viewModel.ZoomInCommand.Execute(null);
+                newZoom = Math.Min(oldZoom + ZoomStep, MaxZoom);
             }
-            else if (e.Delta.Y < 0)
+            else
             {
-                viewModel.ZoomOutCommand.Execute(null);
+                newZoom = Math.Max(oldZoom - ZoomStep, MinZoom);
             }
+
+            if (Math.Abs(newZoom - oldZoom) < 0.001) return;
+
+            var oldScale = viewModel.PreviewDisplayScale;
+            viewModel.PreviewZoom = newZoom;
+            var newScale = viewModel.PreviewDisplayScale;
+            var scaleRatio = newScale / oldScale;
+
+            var imageCenterX = viewportCenter.X + _previewTranslateTransform.X;
+            var imageCenterY = viewportCenter.Y + _previewTranslateTransform.Y;
+
+            var dx = zoomCenter.X - imageCenterX;
+            var dy = zoomCenter.Y - imageCenterY;
+
+            _previewTranslateTransform.X -= dx * (scaleRatio - 1);
+            _previewTranslateTransform.Y -= dy * (scaleRatio - 1);
+
             e.Handled = true;
-            UpdatePreviewFitScale();
         }
     }
 
@@ -248,12 +294,12 @@ public partial class MainWindow : Window
 
     private void UpdatePreviewFitScale()
     {
-        if (DataContext is not MainViewModel viewModel || _previewScrollViewer == null)
+        if (DataContext is not MainViewModel viewModel || _previewGrid == null)
         {
             return;
         }
 
-        var viewportSize = _previewScrollViewer.Bounds.Size;
+        var viewportSize = _previewGrid.Bounds.Size;
         if (viewportSize.Width > 0 && viewportSize.Height > 0)
         {
             viewModel.UpdatePreviewFitScale(viewportSize);
@@ -282,8 +328,11 @@ public partial class MainWindow : Window
             if (index >= 0)
             {
                 viewModel.SelectedTabIndex = index;
-                ResetPreviewOffset();
-                UpdatePreviewFitScale();
+                Dispatcher.UIThread.Post(() =>
+                {
+                    ResetPreviewOffset();
+                    UpdatePreviewFitScale();
+                }, DispatcherPriority.Background);
             }
         }
     }

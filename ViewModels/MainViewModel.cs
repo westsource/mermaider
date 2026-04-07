@@ -65,6 +65,10 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _statusMessage = "就绪";
 
+    private const double MinZoom = 0.1;
+    private const double MaxZoom = 5.0;
+    private const double ZoomStep = 0.1;
+
     [ObservableProperty]
     private bool _canUndoAction;
 
@@ -538,14 +542,14 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void ZoomIn()
     {
-        PreviewZoom = Math.Min(PreviewZoom + 0.1, 3.0);
+        PreviewZoom = Math.Min(PreviewZoom + ZoomStep, MaxZoom);
         StatusMessage = $"缩放: {(int)(PreviewZoom * 100)}%";
     }
 
     [RelayCommand]
     private void ZoomOut()
     {
-        PreviewZoom = Math.Max(PreviewZoom - 0.1, 0.1);
+        PreviewZoom = Math.Max(PreviewZoom - ZoomStep, MinZoom);
         StatusMessage = $"缩放: {(int)(PreviewZoom * 100)}%";
     }
 
@@ -654,8 +658,18 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        var horizontalScale = viewportSize.Width / pixelSize.Width;
-        var verticalScale = viewportSize.Height / pixelSize.Height;
+        const double padding = 48;
+        var availableWidth = viewportSize.Width - padding;
+        var availableHeight = viewportSize.Height - padding;
+
+        if (availableWidth <= 0 || availableHeight <= 0)
+        {
+            PreviewFitScale = 1.0;
+            return;
+        }
+
+        var horizontalScale = availableWidth / pixelSize.Width;
+        var verticalScale = availableHeight / pixelSize.Height;
         PreviewFitScale = Math.Min(1.0, Math.Min(horizontalScale, verticalScale));
     }
 
