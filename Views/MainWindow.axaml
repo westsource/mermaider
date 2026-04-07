@@ -83,7 +83,6 @@
         </Menu>
 
         <Grid Grid.Row="1" RowDefinitions="Auto,*">
-            <!-- 标签页头部 -->
             <Border Grid.Row="0" Background="#F0F0F0" BorderBrush="#CCCCCC" BorderThickness="0,0,0,1">
                 <StackPanel Orientation="Horizontal">
                     <ItemsControl ItemsSource="{Binding Tabs}">
@@ -122,7 +121,6 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     
-                    <!-- 添加标签按钮 -->
                     <Button Content="+" 
                             Width="28" Height="28"
                             Margin="5,0,0,0"
@@ -136,10 +134,8 @@
                 </StackPanel>
             </Border>
 
-            <!-- 标签内容 - 直接绑定到 CurrentTab -->
             <Border Grid.Row="1" Background="#FFFFFF">
-                <Grid ColumnDefinitions="Auto,Auto,*" SizeChanged="OnWorkspaceSizeChanged">
-                    <!-- 代码编辑器区域 - 使用 AvaloniaEdit -->
+                <Grid x:Name="WorkspaceGrid" ColumnDefinitions="Auto,Auto,*" SizeChanged="OnWorkspaceSizeChanged">
                     <Border Grid.Column="0" Background="#FFFFFF" Width="{Binding EditorPanelWidth}" MinWidth="320">
                         <avaloniaEdit:TextEditor x:Name="CodeEditor"
                                                  Document="{Binding #root.DataContext.CurrentTab.Document}"
@@ -154,25 +150,37 @@
                                                  VerticalScrollBarVisibility="Auto"/>
                     </Border>
 
-                    <Border Grid.Column="1" Width="5" Background="#E0E0E0"/>
+                    <Border x:Name="SplitterBorder"
+                            Grid.Column="1"
+                            Width="5"
+                            Background="#E0E0E0"
+                            Cursor="SizeWestEast"
+                            PointerPressed="OnSplitterPointerPressed"
+                            PointerMoved="OnSplitterPointerMoved"
+                            PointerReleased="OnSplitterPointerReleased"/>
 
                     <Border Grid.Column="2" Background="#F8F8F8" MinWidth="360">
-                        <Grid>
+                        <Grid x:Name="PreviewGrid"
+                              PointerPressed="OnPreviewPointerPressed"
+                              PointerMoved="OnPreviewPointerMoved"
+                              PointerReleased="OnPreviewPointerReleased"
+                              PointerWheelChanged="OnPreviewPointerWheelChanged"
+                              ClipToBounds="True">
                             <ScrollViewer x:Name="PreviewScrollViewer"
-                                          HorizontalScrollBarVisibility="Auto" 
-                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled" 
+                                          VerticalScrollBarVisibility="Disabled"
                                           Background="#F8F8F8"
-                                          PointerWheelChanged="OnPreviewPointerWheelChanged"
                                           SizeChanged="OnPreviewViewportSizeChanged">
                                 <Grid Margin="16"
                                       HorizontalAlignment="Center"
                                       VerticalAlignment="Center">
-                                    <controls:LayoutTransformControl>
+                                    <controls:LayoutTransformControl x:Name="PreviewTransformControl">
                                         <controls:LayoutTransformControl.LayoutTransform>
                                             <ScaleTransform ScaleX="{Binding PreviewDisplayScale}"
                                                             ScaleY="{Binding PreviewDisplayScale}"/>
                                         </controls:LayoutTransformControl.LayoutTransform>
-                                        <Border Background="White"
+                                        <Border x:Name="PreviewImageBorder"
+                                                Background="White"
                                                 BorderBrush="#DDDDDD"
                                                 BorderThickness="1"
                                                 Padding="8"
@@ -232,7 +240,6 @@
             </Border>
         </Grid>
 
-        <!-- 状态栏 -->
         <Border Grid.Row="2" Background="#F0F0F0" BorderBrush="#CCCCCC" BorderThickness="0,1,0,0" Padding="5,2">
             <Grid ColumnDefinitions="Auto,*,Auto">
                 <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" Foreground="#666666" VerticalAlignment="Center"/>

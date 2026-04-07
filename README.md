@@ -14,9 +14,10 @@
 ### 文件操作
 - 新建 / 打开 / 保存 Mermaid 文件（.mmd / .mermaid）
 - 支持命令行参数打开文件
+- 最近文件记录（最多10个）
 
 ### 导出功能
-- **复制图片** - 将图表复制到剪贴板（高清，2倍缩放）
+- **复制图片** - 将图表复制到剪贴板（高清，3倍缩放）
 - **保存图片** - 支持多种格式导出
   - PNG 图片（高清，3倍缩放）
   - JPEG 图片（高清，3倍缩放）
@@ -25,6 +26,7 @@
 - 可缩放预览图片（Ctrl + 鼠标滚轮缩放）
 - 可调整编辑器与预览区分隔比例
 - 现代化 Fluent 主题界面
+- 自动保存窗口布局设置
 
 ## 技术栈
 
@@ -32,7 +34,7 @@
 - **UI 框架**: Avalonia UI 11.3
 - **架构模式**: MVVM (CommunityToolkit.Mvvm)
 - **代码编辑器**: AvaloniaEdit
-- **图表渲染**: Mermaid CLI (嵌入式 Node.js)
+- **图表渲染**: Mermaid CLI 11.12.0 (嵌入式)
 
 ## 环境要求
 
@@ -48,7 +50,6 @@
 ### 开发模式
 
 ```bash
-cd mermaid-editor
 dotnet restore
 dotnet run
 ```
@@ -73,6 +74,7 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 
 - 菜单栏：文件 → 打开（Ctrl+O）
 - 命令行参数：`Mermaider.exe example.mmd`
+- 最近文件：文件 → 最近文件
 
 支持 .mmd 和 .mermaid 扩展名。
 
@@ -189,4 +191,13 @@ gantt
 
 ## 许可证
 
-MIT License
+本项目采用 Apache License 2.0 许可证。详见 [LICENSE](LICENSE) 文件。
+
+## 致谢
+
+本项目使用了以下开源项目：
+
+- [Avalonia UI](https://avaloniaui.net/) - 跨平台 UI 框架
+- [AvaloniaEdit](https://github.com/AvaloniaUI/AvaloniaEdit) - 代码编辑器控件
+- [Mermaid CLI](https://github.com/mermaid-js/mermaid-cli) - Mermaid 图表渲染引擎
+- [CommunityToolkit.Mvvm](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/) - MVVM 工具包

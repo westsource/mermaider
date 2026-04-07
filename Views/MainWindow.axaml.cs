@@ -1,8 +1,9 @@
 using System;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
-using Avalonia.VisualTree;
+using Avalonia.Media;
 using Avalonia.Threading;
 using AvaloniaEdit;
 using Mermaider.Models;
@@ -16,6 +17,21 @@ public partial class MainWindow : Window
     private ScrollViewer? _previewScrollViewer;
     private Image? _previewImage;
     private MainViewModel? _viewModel;
+    private Grid? _workspaceGrid;
+    private Border? _splitterBorder;
+    private Grid? _previewGrid;
+    private Border? _previewImageBorder;
+    private TranslateTransform? _previewTranslateTransform;
+
+    private bool _isDraggingSplitter;
+    private double _splitterStartX;
+    private double _editorStartWidth;
+
+    private bool _isDraggingPreview;
+    private Point _previewDragStart;
+    private const double MinEditorWidth = 320;
+    private const double MaxEditorWidth = 860;
+    private const double MinPreviewWidth = 360;
 
     public MainWindow()
     {
@@ -34,6 +50,15 @@ public partial class MainWindow : Window
         _codeEditor = this.FindControl<TextEditor>("CodeEditor");
         _previewScrollViewer = this.FindControl<ScrollViewer>("PreviewScrollViewer");
         _previewImage = this.FindControl<Image>("PreviewImageControl");
+        _workspaceGrid = this.FindControl<Grid>("WorkspaceGrid");
+        _splitterBorder = this.FindControl<Border>("SplitterBorder");
+        _previewGrid = this.FindControl<Grid>("PreviewGrid");
+        _previewImageBorder = this.FindControl<Border>("PreviewImageBorder");
+        _previewTranslateTransform = new TranslateTransform();
+        if (_previewImageBorder != null)
+        {
+            _previewImageBorder.RenderTransform = _previewTranslateTransform;
+        }
 
         if (_codeEditor != null)
         {
@@ -54,9 +79,19 @@ public partial class MainWindow : Window
             {
                 if (e.Property.Name == nameof(Image.Source))
                 {
+                    ResetPreviewOffset();
                     UpdatePreviewFitScale();
                 }
             };
+        }
+    }
+
+    private void ResetPreviewOffset()
+    {
+        if (_previewTranslateTransform != null)
+        {
+            _previewTranslateTransform.X = 0;
+            _previewTranslateTransform.Y = 0;
         }
     }
 
@@ -85,6 +120,7 @@ public partial class MainWindow : Window
         if (e.PropertyName is nameof(MainViewModel.CurrentTab) or nameof(MainViewModel.SelectedTabIndex))
         {
             Dispatcher.UIThread.Post(RefreshEditorState, DispatcherPriority.Background);
+            ResetPreviewOffset();
         }
     }
 
@@ -93,6 +129,93 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel viewModel)
         {
             viewModel.SaveSettings();
+        }
+    }
+
+    private void OnSplitterPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            _isDraggingSplitter = true;
+            _splitterStartX = e.GetPosition(this).X;
+            _editorStartWidth = _viewModel?.EditorPanelWidth ?? 640;
+            e.Pointer.Capture(_splitterBorder);
+            e.Handled = true;
+        }
+    }
+
+    private void OnSplitterPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!_isDraggingSplitter || _viewModel == null || _workspaceGrid == null)
+            return;
+
+        var currentX = e.GetPosition(this).X;
+        var deltaX = currentX - _splitterStartX;
+        var totalWidth = _workspaceGrid.Bounds.Width;
+        var splitterWidth = 5;
+
+        var newEditorWidth = _editorStartWidth + deltaX;
+        var usableWidth = totalWidth - splitterWidth;
+
+        newEditorWidth = Math.Clamp(newEditorWidth, MinEditorWidth, MaxEditorWidth);
+
+        if (usableWidth - newEditorWidth < MinPreviewWidth)
+        {
+            newEditorWidth = Math.Max(MinEditorWidth, usableWidth - MinPreviewWidth);
+        }
+
+        _viewModel.EditorPanelWidth = newEditorWidth;
+        _viewModel.EditorPreviewRatio = totalWidth > 0 ? newEditorWidth / totalWidth : 0.5;
+        e.Handled = true;
+    }
+
+    private void OnSplitterPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_isDraggingSplitter)
+        {
+            _isDraggingSplitter = false;
+            e.Pointer.Capture(null);
+            e.Handled = true;
+        }
+    }
+
+    private void OnPreviewPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(_previewGrid).Properties.IsLeftButtonPressed && _previewImageBorder != null)
+        {
+            _isDraggingPreview = true;
+            _previewDragStart = e.GetPosition(_previewGrid);
+            e.Pointer.Capture(_previewGrid);
+            _previewGrid!.Cursor = new Cursor(StandardCursorType.Hand);
+            e.Handled = true;
+        }
+    }
+
+    private void OnPreviewPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!_isDraggingPreview || _previewTranslateTransform == null)
+            return;
+
+        var currentPos = e.GetPosition(_previewGrid);
+        var delta = currentPos - _previewDragStart;
+        _previewDragStart = currentPos;
+
+        _previewTranslateTransform.X += delta.X;
+        _previewTranslateTransform.Y += delta.Y;
+        e.Handled = true;
+    }
+
+    private void OnPreviewPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_isDraggingPreview)
+        {
+            _isDraggingPreview = false;
+            e.Pointer.Capture(null);
+            if (_previewGrid != null)
+            {
+                _previewGrid.Cursor = Cursor.Default;
+            }
+            e.Handled = true;
         }
     }
 
@@ -159,6 +282,7 @@ public partial class MainWindow : Window
             if (index >= 0)
             {
                 viewModel.SelectedTabIndex = index;
+                ResetPreviewOffset();
                 UpdatePreviewFitScale();
             }
         }
