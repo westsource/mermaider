@@ -50,7 +50,7 @@
                         <DataTemplate x:DataType="models:RecentFileItem">
                             <MenuItem Header="{Binding FileName}" 
                                       ToolTip.Tip="{Binding FilePath}"
-                                      Command="{Binding $parent[Menu].((vm:MainViewModel)DataContext).OpenRecentFileCommand}"
+                                      Command="{Binding #root.DataContext.OpenRecentFileCommand}"
                                       CommandParameter="{Binding}"/>
                         </DataTemplate>
                     </MenuItem.ItemTemplate>
@@ -191,16 +191,6 @@
                                                Stretch="None"/>
                                     </Border>
                                 </controls:LayoutTransformControl>
-
-                                <TextBlock Text="{Binding #root.DataContext.CurrentTab.ErrorMessage}"
-                                           IsVisible="{Binding #root.DataContext.CurrentTab.HasError}"
-                                           Foreground="#CC0000"
-                                           Background="#FFF2F2"
-                                           Padding="10"
-                                           TextWrapping="Wrap"
-                                           MaxWidth="420"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Top"/>
                             </Grid>
 
                             <Border HorizontalAlignment="Right"

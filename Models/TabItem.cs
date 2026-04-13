@@ -50,6 +50,9 @@ public partial class TabItem : ObservableObject
     private Bitmap? _previewImage;
 
     [ObservableProperty]
+    private double _previewRenderScale = 1.0;
+
+    [ObservableProperty]
     private string? _errorMessage;
 
     [ObservableProperty]

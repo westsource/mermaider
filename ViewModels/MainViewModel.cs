@@ -32,6 +32,9 @@ public partial class MainViewModel : ViewModelBase
     private readonly Window _ownerWindow;
     private Timer? _debounceTimer;
     private readonly object _timerLock = new();
+    private readonly object _renderLock = new();
+    private CancellationTokenSource? _renderCancellationTokenSource;
+    private long _renderGeneration;
 
     public static readonly IValueConverter TabBackgroundConverter = new FuncValueConverter<bool, IBrush>(
         isSelected => isSelected ? new SolidColorBrush(Color.Parse("#FFFFFF")) : new SolidColorBrush(Color.Parse("#E8E8E8"))
@@ -68,6 +71,9 @@ public partial class MainViewModel : ViewModelBase
     private const double MinZoom = 0.1;
     private const double MaxZoom = 5.0;
     private const double ZoomStep = 0.1;
+    private const double PreviewRenderScale = 2.0;
+    private const double FullPreviewScale = 3.0;
+    private const int DebounceMilliseconds = 350;
 
     [ObservableProperty]
     private bool _canUndoAction;
@@ -124,6 +130,11 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(PreviewDisplayScale));
         OnPropertyChanged(nameof(ZoomText));
         OnPropertyChanged(nameof(CurrentTab));
+
+        if (CurrentTab != null)
+        {
+            ScheduleValidationAndRender(CurrentTab);
+        }
     }
 
     public MainViewModel(MermaidService mermaidService, FileService fileService, SettingsService settingsService, IStorageProvider storageProvider, Window ownerWindow)
@@ -137,12 +148,14 @@ public partial class MainViewModel : ViewModelBase
 
         EditorPreviewRatio = settingsService.Settings.EditorPreviewRatio;
         PreviewZoom = settingsService.Settings.PreviewZoom;
+        RecentFiles.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasRecentFiles));
 
         _settingsService.CleanInvalidRecentFiles();
         foreach (var file in settingsService.Settings.RecentFiles)
         {
             RecentFiles.Add(new RecentFileItem(file));
         }
+        OnPropertyChanged(nameof(HasRecentFiles));
 
         AddNewTab();
     }
@@ -196,6 +209,13 @@ public partial class MainViewModel : ViewModelBase
 
     private void ScheduleValidationAndRender(TabItem tab)
     {
+        if (!ReferenceEquals(tab, CurrentTab))
+        {
+            return;
+        }
+
+        CancelActiveRender();
+
         lock (_timerLock)
         {
             _debounceTimer?.Dispose();
@@ -205,61 +225,178 @@ public partial class MainViewModel : ViewModelBase
             {
                 await ValidateAndRenderTab(tab);
             });
-        }, null, TimeSpan.FromMilliseconds(500), Timeout.InfiniteTimeSpan);
+        }, null, TimeSpan.FromMilliseconds(DebounceMilliseconds), Timeout.InfiniteTimeSpan);
         }
     }
 
     private async Task ValidateAndRenderTab(TabItem tab)
     {
+        if (!ReferenceEquals(tab, CurrentTab))
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(tab.Content))
         {
+            CancelActiveRender();
             tab.PreviewImage = null;
+            tab.PreviewRenderScale = 1.0;
             tab.HasError = false;
             tab.ErrorMessage = null;
             StatusMessage = "就绪";
             return;
         }
 
-        StatusMessage = "正在检查语法...";
+        var contentSnapshot = tab.Content;
+        var generation = Interlocked.Increment(ref _renderGeneration);
+        var cancellationToken = ReplaceRenderCancellationTokenSource().Token;
+
+        StatusMessage = "正在渲染预览...";
         IsRendering = true;
 
         try
         {
-            var result = await _mermaidService.ValidateSyntaxAsync(tab.Content);
-            
-            if (result.Success)
+            var result = await _mermaidService.RenderAndValidateAsync(contentSnapshot, PreviewRenderScale, cancellationToken);
+
+            if (result.IsCanceled || !IsLatestRenderRequest(tab, contentSnapshot, generation))
             {
-                StatusMessage = "语法正确，正在渲染...";
+                return;
+            }
+
+            if (result.Success && result.ImageData != null)
+            {
                 tab.HasError = false;
                 tab.ErrorMessage = null;
 
-                var imageData = await _mermaidService.RenderToPngAsync(tab.Content, 3.0);
-                if (imageData != null)
-                {
-                    using var stream = new MemoryStream(imageData);
-                    tab.PreviewImage = new Bitmap(stream);
-                    StatusMessage = "渲染完成";
-                }
+                using var stream = new MemoryStream(result.ImageData);
+                tab.PreviewImage = new Bitmap(stream);
+                tab.PreviewRenderScale = PreviewRenderScale;
+                StatusMessage = "预览已更新";
             }
             else
             {
+                var shortError = BuildUserFriendlyError(result.ErrorMessage);
                 tab.HasError = true;
-                tab.ErrorMessage = result.Error;
+                tab.ErrorMessage = shortError;
                 tab.PreviewImage = null;
-                StatusMessage = $"语法错误: {(result.Error?.Length > 50 ? result.Error.Substring(0, 50) + "..." : result.Error)}";
+                tab.PreviewRenderScale = 1.0;
+                StatusMessage = $"语法错误: {shortError}";
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // 新的输入触发了新一轮渲染，当前任务已取消
         }
         catch (Exception ex)
         {
+            var shortError = BuildUserFriendlyError(ex.Message);
             tab.HasError = true;
-            tab.ErrorMessage = ex.Message;
+            tab.ErrorMessage = shortError;
             tab.PreviewImage = null;
-            StatusMessage = $"错误: {ex.Message}";
+            tab.PreviewRenderScale = 1.0;
+            StatusMessage = $"错误: {shortError}";
         }
         finally
         {
-            IsRendering = false;
+            if (generation == Interlocked.Read(ref _renderGeneration))
+            {
+                IsRendering = false;
+            }
         }
+    }
+
+    private CancellationTokenSource ReplaceRenderCancellationTokenSource()
+    {
+        lock (_renderLock)
+        {
+            _renderCancellationTokenSource?.Cancel();
+            _renderCancellationTokenSource?.Dispose();
+            _renderCancellationTokenSource = new CancellationTokenSource();
+            return _renderCancellationTokenSource;
+        }
+    }
+
+    private void CancelActiveRender()
+    {
+        lock (_renderLock)
+        {
+            _renderCancellationTokenSource?.Cancel();
+            _renderCancellationTokenSource?.Dispose();
+            _renderCancellationTokenSource = null;
+        }
+    }
+
+    private bool IsLatestRenderRequest(TabItem tab, string contentSnapshot, long generation)
+    {
+        return generation == Interlocked.Read(ref _renderGeneration)
+            && ReferenceEquals(tab, CurrentTab)
+            && tab.Content == contentSnapshot;
+    }
+
+    private static string BuildUserFriendlyError(string? rawError)
+    {
+        if (string.IsNullOrWhiteSpace(rawError))
+        {
+            return "未知错误";
+        }
+
+        var lines = rawError
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .ToArray();
+
+        if (lines.Length == 0)
+        {
+            return "未知错误";
+        }
+
+        var candidate = lines.FirstOrDefault(line =>
+            !line.StartsWith("at ", StringComparison.OrdinalIgnoreCase) &&
+            !line.StartsWith("在 ", StringComparison.OrdinalIgnoreCase));
+
+        candidate ??= lines[0];
+
+        if (candidate.StartsWith("Error:", StringComparison.OrdinalIgnoreCase))
+        {
+            candidate = candidate.Substring("Error:".Length).Trim();
+        }
+
+        if (candidate.Length > 120)
+        {
+            candidate = candidate.Substring(0, 120) + "...";
+        }
+
+        return string.IsNullOrWhiteSpace(candidate) ? "未知错误" : candidate;
+    }
+
+    private async Task<bool> EnsureHighQualityPreviewAsync(TabItem tab)
+    {
+        if (string.IsNullOrWhiteSpace(tab.Content))
+        {
+            tab.PreviewImage = null;
+            tab.PreviewRenderScale = 1.0;
+            return false;
+        }
+
+        var result = await _mermaidService.RenderAndValidateAsync(tab.Content, FullPreviewScale);
+        if (!result.Success || result.ImageData == null)
+        {
+            var shortError = BuildUserFriendlyError(result.ErrorMessage);
+            tab.HasError = true;
+            tab.ErrorMessage = shortError;
+            tab.PreviewImage = null;
+            tab.PreviewRenderScale = 1.0;
+            StatusMessage = $"语法错误: {shortError}";
+            return false;
+        }
+
+        using var stream = new MemoryStream(result.ImageData);
+        tab.PreviewImage = new Bitmap(stream);
+        tab.PreviewRenderScale = FullPreviewScale;
+        tab.HasError = false;
+        tab.ErrorMessage = null;
+        return true;
     }
 
     private async Task<bool> SaveTabAsync(TabItem tab)
@@ -489,15 +626,16 @@ public partial class MainViewModel : ViewModelBase
     {
         if (CurrentTab == null) return;
 
-        if (CurrentTab.PreviewImage == null)
+        if (!await EnsureHighQualityPreviewAsync(CurrentTab))
         {
-            await ValidateAndRenderTab(CurrentTab);
+            return;
         }
 
-        if (CurrentTab.PreviewImage == null) return;
+        var previewImage = CurrentTab.PreviewImage;
+        if (previewImage == null) return;
 
         using var stream = new MemoryStream();
-        CurrentTab.PreviewImage.Save(stream);
+        previewImage.Save(stream);
         var pngBytes = stream.ToArray();
 
         var clipboard = _ownerWindow.Clipboard;
@@ -520,15 +658,16 @@ public partial class MainViewModel : ViewModelBase
     {
         if (CurrentTab == null) return;
 
-        if (CurrentTab.PreviewImage == null)
+        if (!await EnsureHighQualityPreviewAsync(CurrentTab))
         {
-            await ValidateAndRenderTab(CurrentTab);
+            return;
         }
 
-        if (CurrentTab.PreviewImage == null) return;
+        var previewImage = CurrentTab.PreviewImage;
+        if (previewImage == null) return;
 
         using var stream = new MemoryStream();
-        CurrentTab.PreviewImage.Save(stream);
+        previewImage.Save(stream);
         var imageData = stream.ToArray();
 
         var fileName = Path.GetFileNameWithoutExtension(CurrentTab.Header) + ".png";
@@ -668,9 +807,19 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        var horizontalScale = availableWidth / pixelSize.Width;
-        var verticalScale = availableHeight / pixelSize.Height;
-        PreviewFitScale = Math.Min(1.0, Math.Min(horizontalScale, verticalScale));
+        var renderScale = Math.Max(0.01, CurrentTab.PreviewRenderScale);
+        var logicalWidth = pixelSize.Width / renderScale;
+        var logicalHeight = pixelSize.Height / renderScale;
+        if (logicalWidth <= 0 || logicalHeight <= 0)
+        {
+            PreviewFitScale = 1.0;
+            return;
+        }
+
+        // 先按逻辑尺寸做等比 fit（让图尽量充满预览区），
+        // 再除以渲染倍率映射回位图显示倍率（保证不同 render scale 肉眼等大）。
+        var fitByLogicalSize = Math.Min(availableWidth / logicalWidth, availableHeight / logicalHeight);
+        PreviewFitScale = fitByLogicalSize / renderScale;
     }
 
     public void UpdateEditorState(bool canUndo, bool canRedo, bool hasSelection, bool hasText)
