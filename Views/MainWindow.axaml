@@ -159,71 +159,75 @@
                             PointerMoved="OnSplitterPointerMoved"
                             PointerReleased="OnSplitterPointerReleased"/>
 
-                    <Border Grid.Column="2" Background="#F8F8F8" MinWidth="360">
-                        <Grid x:Name="PreviewGrid"
-                              PointerPressed="OnPreviewPointerPressed"
-                              PointerMoved="OnPreviewPointerMoved"
-                              PointerReleased="OnPreviewPointerReleased"
-                              PointerWheelChanged="OnPreviewPointerWheelChanged"
-                              SizeChanged="OnPreviewViewportSizeChanged"
-                              ClipToBounds="True">
-                            <Grid x:Name="PreviewContentGrid"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center">
-                                <controls:LayoutTransformControl x:Name="PreviewTransformControl"
-                                                                 HorizontalAlignment="Center"
-                                                                 VerticalAlignment="Center">
-                                    <controls:LayoutTransformControl.LayoutTransform>
-                                        <TransformGroup>
+                    <Border Grid.Column="2" Background="#F8F8F8" MinWidth="480">
+                        <Grid>
+                            <Grid x:Name="PreviewGrid"
+                                  Background="Transparent"
+                                  PointerPressed="OnPreviewPointerPressed"
+                                  PointerMoved="OnPreviewPointerMoved"
+                                  PointerReleased="OnPreviewPointerReleased"
+                                  PointerWheelChanged="OnPreviewPointerWheelChanged"
+                                  SizeChanged="OnPreviewViewportSizeChanged"
+                                  ClipToBounds="True">
+                                <Grid x:Name="PreviewContentGrid"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      RenderTransformOrigin="0.5,0.5">
+                                    <Grid.RenderTransform>
+                                        <TranslateTransform/>
+                                    </Grid.RenderTransform>
+                                    <controls:LayoutTransformControl HorizontalAlignment="Center"
+                                                                     VerticalAlignment="Center">
+                                        <controls:LayoutTransformControl.LayoutTransform>
                                             <ScaleTransform ScaleX="{Binding #root.DataContext.PreviewDisplayScale}"
                                                             ScaleY="{Binding #root.DataContext.PreviewDisplayScale}"/>
-                                            <TranslateTransform/>
-                                        </TransformGroup>
-                                    </controls:LayoutTransformControl.LayoutTransform>
-                                    <Border x:Name="PreviewImageBorder"
-                                            Background="White"
-                                            BorderBrush="#DDDDDD"
-                                            BorderThickness="1"
-                                            Padding="8"
-                                            BoxShadow="0 4 12 0 #18000000">
+                                        </controls:LayoutTransformControl.LayoutTransform>
                                         <Image x:Name="PreviewImageControl"
                                                Source="{Binding #root.DataContext.CurrentTab.PreviewImage}"
                                                Stretch="None"/>
-                                    </Border>
-                                </controls:LayoutTransformControl>
+                                    </controls:LayoutTransformControl>
+                                </Grid>
                             </Grid>
 
-                            <Border HorizontalAlignment="Right"
-                                    VerticalAlignment="Top"
-                                    Margin="12"
-                                    Background="#EFFFFFFF"
-                                    CornerRadius="18"
-                                    Padding="6">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Button Width="32"
-                                            Height="32"
-                                            Padding="0"
-                                            Command="{Binding CopyImageCommand}"
-                                            ToolTip.Tip="复制预览图">
-                                        <Path Width="15"
-                                              Height="15"
-                                              Stretch="Uniform"
-                                              Fill="#444444"
-                                              Data="M5,2 H13 A2,2 0 0 1 15,4 V12 H13 V4 H5 Z M2,5 H10 A2,2 0 0 1 12,7 V15 A2,2 0 0 1 10,17 H4 A2,2 0 0 1 2,15 Z"/>
-                                    </Button>
-                                    <Button Width="32"
-                                            Height="32"
-                                            Padding="0"
-                                            Command="{Binding SaveImageCommand}"
-                                            ToolTip.Tip="保存预览图">
-                                        <Path Width="15"
-                                              Height="15"
-                                              Stretch="Uniform"
-                                              Fill="#444444"
-                                              Data="M3,2 H13 L16,5 V16 H3 Z M5,2 V7 H11 V2 M6,16 V11 H13 V16 Z"/>
-                                    </Button>
-                                </StackPanel>
-                            </Border>
+                            <StackPanel HorizontalAlignment="Right"
+                                        VerticalAlignment="Top"
+                                        Margin="12"
+                                        Spacing="6"
+                                        Panel.ZIndex="10">
+                                <Button Width="32"
+                                        Height="32"
+                                        Padding="0"
+                                        Command="{Binding SaveImageCommand}"
+                                        ToolTip.Tip="保存预览图">
+                                    <Path Width="15"
+                                          Height="15"
+                                          Stretch="Uniform"
+                                          Fill="#444444"
+                                          Data="M3,2 H13 L16,5 V16 H3 Z M5,2 V7 H11 V2 M6,16 V11 H13 V16 Z"/>
+                                </Button>
+                                <Button Width="32"
+                                        Height="32"
+                                        Padding="0"
+                                        Command="{Binding CopyImageCommand}"
+                                        ToolTip.Tip="复制预览图">
+                                    <Path Width="15"
+                                          Height="15"
+                                          Stretch="Uniform"
+                                          Fill="#444444"
+                                          Data="M5,2 H13 A2,2 0 0 1 15,4 V12 H13 V4 H5 Z M2,5 H10 A2,2 0 0 1 12,7 V15 A2,2 0 0 1 10,17 H4 A2,2 0 0 1 2,15 Z"/>
+                                </Button>
+                                <Button Width="32"
+                                        Height="32"
+                                        Padding="0"
+                                        Click="OnResetPreviewClicked"
+                                        ToolTip.Tip="重置预览">
+                                    <Path Width="15"
+                                          Height="15"
+                                          Stretch="Uniform"
+                                          Fill="#444444"
+                                          Data="M8,2 A6,6 0 1 0 13.66,10 H11.8 A4.2,4.2 0 1 1 8,3.8 V1 L12,4 L8,7 Z"/>
+                                </Button>
+                            </StackPanel>
                         </Grid>
                     </Border>
                 </Grid>

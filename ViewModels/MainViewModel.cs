@@ -68,7 +68,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _statusMessage = "就绪";
 
-    private const double MinZoom = 0.1;
+    private const double MinZoom = 1.0;
     private const double MaxZoom = 5.0;
     private const double ZoomStep = 0.1;
     private const double PreviewRenderScale = 2.0;
@@ -843,7 +843,7 @@ public partial class MainViewModel : ViewModelBase
         const double splitterWidth = 5;
         const double minEditorWidth = 420;
         const double maxEditorWidth = 860;
-        const double minPreviewWidth = 360;
+        const double minPreviewWidth = 480;
 
         var usableWidth = Math.Max(0, totalWidth - splitterWidth);
         var targetWidth = usableWidth * EditorPreviewRatio;

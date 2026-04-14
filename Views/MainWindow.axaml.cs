@@ -2,6 +2,7 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -19,8 +20,6 @@ public partial class MainWindow : Window
     private Grid? _workspaceGrid;
     private Border? _splitterBorder;
     private Grid? _previewGrid;
-    private Border? _previewImageBorder;
-    private LayoutTransformControl? _previewTransformControl;
     private Grid? _previewContentGrid;
     private TranslateTransform? _previewTranslateTransform;
 
@@ -32,10 +31,10 @@ public partial class MainWindow : Window
     private Point _previewDragStart;
     private const double MinEditorWidth = 320;
     private const double MaxEditorWidth = 860;
-    private const double MinPreviewWidth = 360;
+    private const double MinPreviewWidth = 480;
 
     private const double ZoomStep = 0.1;
-    private const double MinZoom = 0.1;
+    private const double MinZoom = 1.0;
     private const double MaxZoom = 5.0;
 
     public MainWindow()
@@ -57,19 +56,13 @@ public partial class MainWindow : Window
         _workspaceGrid = this.FindControl<Grid>("WorkspaceGrid");
         _splitterBorder = this.FindControl<Border>("SplitterBorder");
         _previewGrid = this.FindControl<Grid>("PreviewGrid");
-        _previewImageBorder = this.FindControl<Border>("PreviewImageBorder");
-        _previewTransformControl = this.FindControl<LayoutTransformControl>("PreviewTransformControl");
         _previewContentGrid = this.FindControl<Grid>("PreviewContentGrid");
 
-        if (_previewTransformControl?.LayoutTransform is TransformGroup transformGroup)
+        if (_previewContentGrid != null)
         {
-            foreach (var transform in transformGroup.Children)
+            if (_previewContentGrid.RenderTransform is TranslateTransform translateTransform)
             {
-                if (transform is TranslateTransform translateTransform)
-                {
-                    _previewTranslateTransform = translateTransform;
-                    break;
-                }
+                _previewTranslateTransform = translateTransform;
             }
         }
 
@@ -201,7 +194,15 @@ public partial class MainWindow : Window
 
     private void OnPreviewPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (e.GetCurrentPoint(_previewGrid).Properties.IsLeftButtonPressed)
+        if (_previewGrid == null)
+        {
+            return;
+        }
+
+        var point = e.GetCurrentPoint(_previewGrid);
+        var isLeftPressed = point.Properties.IsLeftButtonPressed ||
+                            point.Properties.PointerUpdateKind == PointerUpdateKind.LeftButtonPressed;
+        if (isLeftPressed)
         {
             _isDraggingPreview = true;
             _previewDragStart = e.GetPosition(_previewGrid);
@@ -213,7 +214,7 @@ public partial class MainWindow : Window
 
     private void OnPreviewPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (!_isDraggingPreview || _previewTranslateTransform == null)
+        if (!_isDraggingPreview || _previewTranslateTransform == null || _previewGrid == null)
             return;
 
         var currentPos = e.GetPosition(_previewGrid);
@@ -284,6 +285,17 @@ public partial class MainWindow : Window
 
     private void OnPreviewViewportSizeChanged(object? sender, SizeChangedEventArgs e)
     {
+        UpdatePreviewFitScale();
+    }
+
+    private void OnResetPreviewClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+        {
+            viewModel.ResetZoomCommand.Execute(null);
+        }
+
+        ResetPreviewOffset();
         UpdatePreviewFitScale();
     }
 
