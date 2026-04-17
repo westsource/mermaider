@@ -2,7 +2,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Mermaider.ViewModels"
         xmlns:models="using:Mermaider.Models"
-        xmlns:controls="using:Avalonia.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:avaloniaEdit="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
@@ -34,9 +33,6 @@
         <KeyBinding Gesture="Ctrl+C" Command="{Binding CopyCommand}"/>
         <KeyBinding Gesture="Ctrl+V" Command="{Binding PasteCommand}"/>
         <KeyBinding Gesture="Ctrl+A" Command="{Binding SelectAllCommand}"/>
-        <KeyBinding Gesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}"/>
-        <KeyBinding Gesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}"/>
-        <KeyBinding Gesture="Ctrl+D0" Command="{Binding ResetZoomCommand}"/>
     </Window.KeyBindings>
 
     <Grid RowDefinitions="Auto,*,Auto">
@@ -71,11 +67,6 @@
                 <MenuItem Header="复制(_C)" InputGesture="Ctrl+C" Command="{Binding CopyCommand}" IsEnabled="{Binding CanCopyAction}"/>
                 <MenuItem Header="粘贴(_V)" InputGesture="Ctrl+V" Command="{Binding PasteCommand}" IsEnabled="{Binding CanPasteAction}"/>
                 <MenuItem Header="全选(_A)" InputGesture="Ctrl+A" Command="{Binding SelectAllCommand}" IsEnabled="{Binding CanSelectAllAction}"/>
-            </MenuItem>
-            <MenuItem Header="视图(_V)">
-                <MenuItem Header="放大(_I)" InputGesture="Ctrl++" Command="{Binding ZoomInCommand}"/>
-                <MenuItem Header="缩小(_O)" InputGesture="Ctrl+-" Command="{Binding ZoomOutCommand}"/>
-                <MenuItem Header="重置缩放(_R)" InputGesture="Ctrl+0" Command="{Binding ResetZoomCommand}"/>
             </MenuItem>
             <MenuItem Header="帮助(_H)">
                 <MenuItem Header="关于(_A)..." Command="{Binding AboutCommand}"/>
@@ -161,73 +152,54 @@
 
                     <Border Grid.Column="2" Background="#F8F8F8" MinWidth="480">
                         <Grid>
-                            <Grid x:Name="PreviewGrid"
-                                  Background="Transparent"
-                                  PointerPressed="OnPreviewPointerPressed"
-                                  PointerMoved="OnPreviewPointerMoved"
-                                  PointerReleased="OnPreviewPointerReleased"
-                                  PointerWheelChanged="OnPreviewPointerWheelChanged"
-                                  SizeChanged="OnPreviewViewportSizeChanged"
-                                  ClipToBounds="True">
-                                <Grid x:Name="PreviewContentGrid"
-                                      HorizontalAlignment="Center"
-                                      VerticalAlignment="Center"
-                                      RenderTransformOrigin="0.5,0.5">
-                                    <Grid.RenderTransform>
-                                        <TranslateTransform/>
-                                    </Grid.RenderTransform>
-                                    <controls:LayoutTransformControl HorizontalAlignment="Center"
-                                                                     VerticalAlignment="Center">
-                                        <controls:LayoutTransformControl.LayoutTransform>
-                                            <ScaleTransform ScaleX="{Binding #root.DataContext.PreviewDisplayScale}"
-                                                            ScaleY="{Binding #root.DataContext.PreviewDisplayScale}"/>
-                                        </controls:LayoutTransformControl.LayoutTransform>
-                                        <Image x:Name="PreviewImageControl"
-                                               Source="{Binding #root.DataContext.CurrentTab.PreviewImage}"
-                                               Stretch="None"/>
-                                    </controls:LayoutTransformControl>
-                                </Grid>
-                            </Grid>
+                            <Border x:Name="PreviewGrid"
+                                    Background="#F8F8F8"
+                                    ClipToBounds="True">
+                                <Border x:Name="PreviewWebHost"
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Stretch"
+                                        Background="#FFFFFF"
+                                        BorderThickness="0"/>
+                            </Border>
 
-                            <StackPanel HorizontalAlignment="Right"
-                                        VerticalAlignment="Top"
-                                        Margin="12"
-                                        Spacing="6"
-                                        Panel.ZIndex="10">
-                                <Button Width="32"
-                                        Height="32"
-                                        Padding="0"
-                                        Command="{Binding SaveImageCommand}"
-                                        ToolTip.Tip="保存预览图">
-                                    <Path Width="15"
-                                          Height="15"
-                                          Stretch="Uniform"
-                                          Fill="#444444"
-                                          Data="M3,2 H13 L16,5 V16 H3 Z M5,2 V7 H11 V2 M6,16 V11 H13 V16 Z"/>
-                                </Button>
-                                <Button Width="32"
-                                        Height="32"
-                                        Padding="0"
-                                        Command="{Binding CopyImageCommand}"
-                                        ToolTip.Tip="复制预览图">
-                                    <Path Width="15"
-                                          Height="15"
-                                          Stretch="Uniform"
-                                          Fill="#444444"
-                                          Data="M5,2 H13 A2,2 0 0 1 15,4 V12 H13 V4 H5 Z M2,5 H10 A2,2 0 0 1 12,7 V15 A2,2 0 0 1 10,17 H4 A2,2 0 0 1 2,15 Z"/>
-                                </Button>
-                                <Button Width="32"
-                                        Height="32"
-                                        Padding="0"
-                                        Click="OnResetPreviewClicked"
-                                        ToolTip.Tip="重置预览">
-                                    <Path Width="15"
-                                          Height="15"
-                                          Stretch="Uniform"
-                                          Fill="#444444"
-                                          Data="M8,2 A6,6 0 1 0 13.66,10 H11.8 A4.2,4.2 0 1 1 8,3.8 V1 L12,4 L8,7 Z"/>
-                                </Button>
-                            </StackPanel>
+                            <Popup IsOpen="True"
+                                   IsLightDismissEnabled="False"
+                                   Placement="AnchorAndGravity"
+                                   PlacementTarget="{Binding #PreviewGrid}"
+                                   PlacementAnchor="TopRight"
+                                   PlacementGravity="BottomLeft"
+                                   HorizontalOffset="-12"
+                                   VerticalOffset="12">
+                                <Border Background="Transparent"
+                                        BorderThickness="0"
+                                        CornerRadius="6"
+                                        Padding="4">
+                                    <StackPanel Spacing="6">
+                                        <Button Width="32"
+                                                Height="32"
+                                                Padding="0"
+                                                Command="{Binding SaveImageCommand}"
+                                                ToolTip.Tip="保存预览图">
+                                            <Path Width="15"
+                                                  Height="15"
+                                                  Stretch="Uniform"
+                                                  Fill="#444444"
+                                                  Data="M3,2 H13 L16,5 V16 H3 Z M5,2 V7 H11 V2 M6,16 V11 H13 V16 Z"/>
+                                        </Button>
+                                        <Button Width="32"
+                                                Height="32"
+                                                Padding="0"
+                                                Command="{Binding CopyImageCommand}"
+                                                ToolTip.Tip="复制预览图">
+                                            <Path Width="15"
+                                                  Height="15"
+                                                  Stretch="Uniform"
+                                                  Fill="#444444"
+                                                  Data="M5,2 H13 A2,2 0 0 1 15,4 V12 H13 V4 H5 Z M2,5 H10 A2,2 0 0 1 12,7 V15 A2,2 0 0 1 10,17 H4 A2,2 0 0 1 2,15 Z"/>
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+                            </Popup>
                         </Grid>
                     </Border>
                 </Grid>
@@ -237,7 +209,6 @@
         <Border Grid.Row="2" Background="#F0F0F0" BorderBrush="#CCCCCC" BorderThickness="0,1,0,0" Padding="5,2">
             <Grid ColumnDefinitions="Auto,*,Auto">
                 <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" Foreground="#666666" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="2" Text="{Binding ZoomText}" Foreground="#666666" VerticalAlignment="Center"/>
             </Grid>
         </Border>
     </Grid>

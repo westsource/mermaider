@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -68,10 +69,12 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _statusMessage = "就绪";
 
+    [ObservableProperty]
+    private string _currentPreviewHtml = BuildPreviewHtml(string.Empty);
+
     private const double MinZoom = 1.0;
     private const double MaxZoom = 5.0;
     private const double ZoomStep = 0.1;
-    private const double PreviewRenderScale = 2.0;
     private const double FullPreviewScale = 3.0;
     private const int DebounceMilliseconds = 350;
 
@@ -130,6 +133,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(PreviewDisplayScale));
         OnPropertyChanged(nameof(ZoomText));
         OnPropertyChanged(nameof(CurrentTab));
+        CurrentPreviewHtml = CurrentTab?.WebPreviewHtml ?? BuildPreviewHtml(string.Empty);
 
         if (CurrentTab != null)
         {
@@ -194,6 +198,7 @@ public partial class MainViewModel : ViewModelBase
             }
 
             OnPropertyChanged(nameof(CurrentTab));
+            CurrentPreviewHtml = CurrentTab?.WebPreviewHtml ?? BuildPreviewHtml(string.Empty);
         }
     }
 
@@ -239,10 +244,10 @@ public partial class MainViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(tab.Content))
         {
             CancelActiveRender();
-            tab.PreviewImage = null;
-            tab.PreviewRenderScale = 1.0;
+            tab.WebPreviewHtml = BuildPreviewHtml(string.Empty);
             tab.HasError = false;
             tab.ErrorMessage = null;
+            CurrentPreviewHtml = tab.WebPreviewHtml;
             StatusMessage = "就绪";
             return;
         }
@@ -256,32 +261,18 @@ public partial class MainViewModel : ViewModelBase
 
         try
         {
-            var result = await _mermaidService.RenderAndValidateAsync(contentSnapshot, PreviewRenderScale, cancellationToken);
+            await Task.Delay(1, cancellationToken);
 
-            if (result.IsCanceled || !IsLatestRenderRequest(tab, contentSnapshot, generation))
+            if (!IsLatestRenderRequest(tab, contentSnapshot, generation))
             {
                 return;
             }
 
-            if (result.Success && result.ImageData != null)
-            {
-                tab.HasError = false;
-                tab.ErrorMessage = null;
-
-                using var stream = new MemoryStream(result.ImageData);
-                tab.PreviewImage = new Bitmap(stream);
-                tab.PreviewRenderScale = PreviewRenderScale;
-                StatusMessage = "预览已更新";
-            }
-            else
-            {
-                var shortError = BuildUserFriendlyError(result.ErrorMessage);
-                tab.HasError = true;
-                tab.ErrorMessage = shortError;
-                tab.PreviewImage = null;
-                tab.PreviewRenderScale = 1.0;
-                StatusMessage = $"语法错误: {shortError}";
-            }
+            tab.HasError = false;
+            tab.ErrorMessage = null;
+            tab.WebPreviewHtml = BuildPreviewHtml(contentSnapshot);
+            CurrentPreviewHtml = tab.WebPreviewHtml;
+            StatusMessage = "预览已更新";
         }
         catch (OperationCanceledException)
         {
@@ -292,8 +283,8 @@ public partial class MainViewModel : ViewModelBase
             var shortError = BuildUserFriendlyError(ex.Message);
             tab.HasError = true;
             tab.ErrorMessage = shortError;
-            tab.PreviewImage = null;
-            tab.PreviewRenderScale = 1.0;
+            tab.WebPreviewHtml = BuildErrorPreviewHtml(shortError);
+            CurrentPreviewHtml = tab.WebPreviewHtml;
             StatusMessage = $"错误: {shortError}";
         }
         finally
@@ -370,13 +361,11 @@ public partial class MainViewModel : ViewModelBase
         return string.IsNullOrWhiteSpace(candidate) ? "未知错误" : candidate;
     }
 
-    private async Task<bool> EnsureHighQualityPreviewAsync(TabItem tab)
+    private async Task<byte[]?> RenderHighQualityPreviewAsync(TabItem tab)
     {
         if (string.IsNullOrWhiteSpace(tab.Content))
         {
-            tab.PreviewImage = null;
-            tab.PreviewRenderScale = 1.0;
-            return false;
+            return null;
         }
 
         var result = await _mermaidService.RenderAndValidateAsync(tab.Content, FullPreviewScale);
@@ -385,18 +374,13 @@ public partial class MainViewModel : ViewModelBase
             var shortError = BuildUserFriendlyError(result.ErrorMessage);
             tab.HasError = true;
             tab.ErrorMessage = shortError;
-            tab.PreviewImage = null;
-            tab.PreviewRenderScale = 1.0;
             StatusMessage = $"语法错误: {shortError}";
-            return false;
+            return null;
         }
 
-        using var stream = new MemoryStream(result.ImageData);
-        tab.PreviewImage = new Bitmap(stream);
-        tab.PreviewRenderScale = FullPreviewScale;
         tab.HasError = false;
         tab.ErrorMessage = null;
-        return true;
+        return result.ImageData;
     }
 
     private async Task<bool> SaveTabAsync(TabItem tab)
@@ -691,17 +675,11 @@ public partial class MainViewModel : ViewModelBase
     {
         if (CurrentTab == null) return;
 
-        if (!await EnsureHighQualityPreviewAsync(CurrentTab))
+        var pngBytes = await RenderHighQualityPreviewAsync(CurrentTab);
+        if (pngBytes == null)
         {
             return;
         }
-
-        var previewImage = CurrentTab.PreviewImage;
-        if (previewImage == null) return;
-
-        using var stream = new MemoryStream();
-        previewImage.Save(stream);
-        var pngBytes = stream.ToArray();
 
         var clipboard = _ownerWindow.Clipboard;
         if (clipboard == null)
@@ -723,17 +701,11 @@ public partial class MainViewModel : ViewModelBase
     {
         if (CurrentTab == null) return;
 
-        if (!await EnsureHighQualityPreviewAsync(CurrentTab))
+        var imageData = await RenderHighQualityPreviewAsync(CurrentTab);
+        if (imageData == null)
         {
             return;
         }
-
-        var previewImage = CurrentTab.PreviewImage;
-        if (previewImage == null) return;
-
-        using var stream = new MemoryStream();
-        previewImage.Save(stream);
-        var imageData = stream.ToArray();
 
         var fileName = Path.GetFileNameWithoutExtension(CurrentTab.Header) + ".png";
         var result = await _fileService.SaveImageAsync(imageData, fileName);
@@ -849,42 +821,7 @@ public partial class MainViewModel : ViewModelBase
 
     public void UpdatePreviewFitScale(Size viewportSize)
     {
-        if (CurrentTab?.PreviewImage == null || viewportSize.Width <= 0 || viewportSize.Height <= 0)
-        {
-            PreviewFitScale = 1.0;
-            return;
-        }
-
-        var pixelSize = CurrentTab.PreviewImage.PixelSize;
-        if (pixelSize.Width <= 0 || pixelSize.Height <= 0)
-        {
-            PreviewFitScale = 1.0;
-            return;
-        }
-
-        const double padding = 48;
-        var availableWidth = viewportSize.Width - padding;
-        var availableHeight = viewportSize.Height - padding;
-
-        if (availableWidth <= 0 || availableHeight <= 0)
-        {
-            PreviewFitScale = 1.0;
-            return;
-        }
-
-        var renderScale = Math.Max(0.01, CurrentTab.PreviewRenderScale);
-        var logicalWidth = pixelSize.Width / renderScale;
-        var logicalHeight = pixelSize.Height / renderScale;
-        if (logicalWidth <= 0 || logicalHeight <= 0)
-        {
-            PreviewFitScale = 1.0;
-            return;
-        }
-
-        // 先按逻辑尺寸做等比 fit（让图尽量充满预览区），
-        // 再除以渲染倍率映射回位图显示倍率（保证不同 render scale 肉眼等大）。
-        var fitByLogicalSize = Math.Min(availableWidth / logicalWidth, availableHeight / logicalHeight);
-        PreviewFitScale = fitByLogicalSize / renderScale;
+        PreviewFitScale = 1.0;
     }
 
     public void UpdateEditorState(bool canUndo, bool canRedo, bool hasSelection, bool hasText)
@@ -940,5 +877,193 @@ public partial class MainViewModel : ViewModelBase
     B -->|否| D[处理B]
     C --> E[结束]
     D --> E";
+    }
+
+    private static string BuildPreviewHtml(string mermaidCode)
+    {
+        var mermaidCodeJson = JsonSerializer.Serialize(mermaidCode ?? string.Empty);
+        return $$"""
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      overflow: hidden;
+      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+    #root {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-sizing: border-box;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      background: #fff;
+    }
+    #diagram svg {
+      display: block;
+    }
+    .error {
+      color: #b42318;
+      background: #fef3f2;
+      border: 1px solid #fecdca;
+      border-radius: 8px;
+      padding: 12px;
+      white-space: pre-wrap;
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"><div id="diagram"></div></div>
+  <script src="./mermaid.min.js"></script>
+  <script>
+    const code = {{mermaidCodeJson}};
+    const root = document.getElementById('root');
+    const target = document.getElementById('diagram');
+    let scale = 1;
+    let offsetX = 0;
+    let offsetY = 0;
+    let dragging = false;
+    let lastX = 0;
+    let lastY = 0;
+    const minScale = 0.2;
+    const maxScale = 6;
+
+    function applyTransform() {
+      target.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+      target.style.transformOrigin = 'center center';
+    }
+
+    function fitToViewport() {
+      scale = 1;
+      offsetX = 0;
+      offsetY = 0;
+      applyTransform();
+
+      const rootRect = root.getBoundingClientRect();
+      const diagramRect = target.getBoundingClientRect();
+      if (rootRect.width <= 0 || rootRect.height <= 0 || diagramRect.width <= 0 || diagramRect.height <= 0) {
+        return;
+      }
+
+      const padding = 24;
+      const fitScaleX = Math.max(0.01, (rootRect.width - padding) / diagramRect.width);
+      const fitScaleY = Math.max(0.01, (rootRect.height - padding) / diagramRect.height);
+      const fitScale = Math.min(fitScaleX, fitScaleY);
+      scale = Math.max(minScale, Math.min(maxScale, fitScale));
+      applyTransform();
+    }
+
+    function showError(message) {
+      const safeMessage = String(message ?? '预览失败').replace(/[<>&]/g, s => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[s]));
+      target.innerHTML = `<pre class="error">${safeMessage}</pre>`;
+    }
+
+    root.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      dragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      root.style.cursor = 'grabbing';
+      root.setPointerCapture(e.pointerId);
+    });
+
+    root.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      offsetX += dx;
+      offsetY += dy;
+      applyTransform();
+    });
+
+    root.addEventListener('pointerup', (e) => {
+      dragging = false;
+      root.style.cursor = 'grab';
+      if (root.hasPointerCapture(e.pointerId)) {
+        root.releasePointerCapture(e.pointerId);
+      }
+    });
+
+    root.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const oldScale = scale;
+      const zoomStep = e.deltaY < 0 ? 1.1 : 0.9;
+      scale = Math.max(minScale, Math.min(maxScale, scale * zoomStep));
+      if (Math.abs(scale - oldScale) < 1e-6) return;
+
+      const rect = root.getBoundingClientRect();
+      const cx = e.clientX - rect.left - rect.width / 2;
+      const cy = e.clientY - rect.top - rect.height / 2;
+      const ratio = scale / oldScale;
+      offsetX -= cx * (ratio - 1);
+      offsetY -= cy * (ratio - 1);
+      applyTransform();
+    }, { passive: false });
+
+    root.addEventListener('dblclick', () => {
+      fitToViewport();
+    });
+
+    (async () => {
+      try {
+        if (!window.mermaid) {
+          showError('未加载到本地 mermaid.js 资源');
+          return;
+        }
+        mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'default' });
+        const { svg } = await mermaid.render(`mermaid-${Date.now()}`, code);
+        target.innerHTML = svg;
+        requestAnimationFrame(() => fitToViewport());
+      } catch (err) {
+        showError(err && err.message ? err.message : err);
+      }
+    })();
+  </script>
+</body>
+</html>
+""";
+    }
+
+    private static string BuildErrorPreviewHtml(string errorMessage)
+    {
+        var escaped = System.Net.WebUtility.HtmlEncode(errorMessage);
+        return $$"""
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <style>
+    html, body { margin: 0; background: #fff; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+    .error {
+      color: #b42318;
+      background: #fef3f2;
+      border: 1px solid #fecdca;
+      border-radius: 8px;
+      margin: 16px;
+      padding: 12px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <pre class="error">{{escaped}}</pre>
+</body>
+</html>
+""";
     }
 }

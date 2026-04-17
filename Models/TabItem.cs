@@ -59,6 +59,9 @@ public partial class TabItem : ObservableObject
     private bool _hasError;
 
     [ObservableProperty]
+    private string _webPreviewHtml = string.Empty;
+
+    [ObservableProperty]
     private bool _isSelected;
 
     public string Title => IsModified ? $"{Header} *" : Header;

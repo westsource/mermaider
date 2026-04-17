@@ -1,12 +1,16 @@
 using System;
+using System.IO;
+using System.Reflection;
+using System.Text;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
-using Avalonia.Media;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using AvaloniaEdit;
+using AvaloniaWebView;
 using Mermaider.Models;
 using Mermaider.ViewModels;
 
@@ -15,27 +19,28 @@ namespace Mermaider.Views;
 public partial class MainWindow : Window
 {
     private TextEditor? _codeEditor;
-    private Image? _previewImage;
+    private Border? _previewWebHost;
     private MainViewModel? _viewModel;
     private Grid? _workspaceGrid;
     private Border? _splitterBorder;
-    private Grid? _previewGrid;
-    private Grid? _previewContentGrid;
-    private TranslateTransform? _previewTranslateTransform;
+    private Border? _previewGrid;
+    private WebView? _previewWebViewControl;
+    private MethodInfo? _webViewNavigateMethod;
+    private PropertyInfo? _webViewSourceProperty;
+    private PropertyInfo? _webViewUrlProperty;
+    private string? _pendingPreviewHtml;
+    private string? _previewTempDir;
+    private string? _previewHtmlPath;
+    private bool _webViewAttached;
+    private bool _webViewInitTried;
 
     private bool _isDraggingSplitter;
     private double _splitterStartX;
     private double _editorStartWidth;
 
-    private bool _isDraggingPreview;
-    private Point _previewDragStart;
     private const double MinEditorWidth = 320;
     private const double MaxEditorWidth = 860;
     private const double MinPreviewWidth = 480;
-
-    private const double ZoomStep = 0.1;
-    private const double MinZoom = 1.0;
-    private const double MaxZoom = 5.0;
 
     public MainWindow()
     {
@@ -52,19 +57,10 @@ public partial class MainWindow : Window
     private void AttachPreviewHandlers()
     {
         _codeEditor = this.FindControl<TextEditor>("CodeEditor");
-        _previewImage = this.FindControl<Image>("PreviewImageControl");
+        _previewWebHost = this.FindControl<Border>("PreviewWebHost");
         _workspaceGrid = this.FindControl<Grid>("WorkspaceGrid");
         _splitterBorder = this.FindControl<Border>("SplitterBorder");
-        _previewGrid = this.FindControl<Grid>("PreviewGrid");
-        _previewContentGrid = this.FindControl<Grid>("PreviewContentGrid");
-
-        if (_previewContentGrid != null)
-        {
-            if (_previewContentGrid.RenderTransform is TranslateTransform translateTransform)
-            {
-                _previewTranslateTransform = translateTransform;
-            }
-        }
+        _previewGrid = this.FindControl<Border>("PreviewGrid");
 
         if (_codeEditor != null)
         {
@@ -79,29 +75,11 @@ public partial class MainWindow : Window
             };
         }
 
-        if (_previewImage != null)
-        {
-            _previewImage.PropertyChanged += (_, e) =>
-            {
-                if (e.Property.Name == nameof(Image.Source))
-                {
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        ResetPreviewOffset();
-                        UpdatePreviewFitScale();
-                    }, DispatcherPriority.Background);
-                }
-            };
-        }
     }
 
     private void ResetPreviewOffset()
     {
-        if (_previewTranslateTransform != null)
-        {
-            _previewTranslateTransform.X = 0;
-            _previewTranslateTransform.Y = 0;
-        }
+        // WebView 预览不再支持拖拽偏移
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -120,6 +98,7 @@ public partial class MainWindow : Window
             {
                 RefreshEditorState();
                 UpdateWorkspaceLayout();
+                UpdateWebPreview();
             }, DispatcherPriority.Background);
         }
     }
@@ -133,7 +112,12 @@ public partial class MainWindow : Window
             {
                 ResetPreviewOffset();
                 UpdatePreviewFitScale();
+                UpdateWebPreview();
             }, DispatcherPriority.Background);
+        }
+        else if (e.PropertyName == nameof(MainViewModel.CurrentPreviewHtml))
+        {
+            Dispatcher.UIThread.Post(UpdateWebPreview, DispatcherPriority.Background);
         }
     }
 
@@ -190,102 +174,6 @@ public partial class MainWindow : Window
             e.Pointer.Capture(null);
             e.Handled = true;
         }
-    }
-
-    private void OnPreviewPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (_previewGrid == null)
-        {
-            return;
-        }
-
-        var point = e.GetCurrentPoint(_previewGrid);
-        var isLeftPressed = point.Properties.IsLeftButtonPressed ||
-                            point.Properties.PointerUpdateKind == PointerUpdateKind.LeftButtonPressed;
-        if (isLeftPressed)
-        {
-            _isDraggingPreview = true;
-            _previewDragStart = e.GetPosition(_previewGrid);
-            e.Pointer.Capture(_previewGrid);
-            _previewGrid!.Cursor = new Cursor(StandardCursorType.Hand);
-            e.Handled = true;
-        }
-    }
-
-    private void OnPreviewPointerMoved(object? sender, PointerEventArgs e)
-    {
-        if (!_isDraggingPreview || _previewTranslateTransform == null || _previewGrid == null)
-            return;
-
-        var currentPos = e.GetPosition(_previewGrid);
-        var delta = currentPos - _previewDragStart;
-        _previewDragStart = currentPos;
-
-        _previewTranslateTransform.X += delta.X;
-        _previewTranslateTransform.Y += delta.Y;
-        e.Handled = true;
-    }
-
-    private void OnPreviewPointerReleased(object? sender, PointerReleasedEventArgs e)
-    {
-        if (_isDraggingPreview)
-        {
-            _isDraggingPreview = false;
-            e.Pointer.Capture(null);
-            if (_previewGrid != null)
-            {
-                _previewGrid.Cursor = Cursor.Default;
-            }
-            e.Handled = true;
-        }
-    }
-
-    private void OnPreviewPointerWheelChanged(object? sender, PointerWheelEventArgs e)
-    {
-        if (DataContext is not MainViewModel viewModel || _previewTranslateTransform == null || _previewGrid == null)
-            return;
-
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
-        {
-            var mousePos = e.GetPosition(_previewGrid);
-            var viewportCenter = new Point(_previewGrid.Bounds.Width / 2, _previewGrid.Bounds.Height / 2);
-            var zoomCenter = mousePos;
-
-            var oldZoom = viewModel.PreviewZoom;
-            double newZoom;
-
-            if (e.Delta.Y > 0)
-            {
-                newZoom = Math.Min(oldZoom + ZoomStep, MaxZoom);
-            }
-            else
-            {
-                newZoom = Math.Max(oldZoom - ZoomStep, MinZoom);
-            }
-
-            if (Math.Abs(newZoom - oldZoom) < 0.001) return;
-
-            var oldScale = viewModel.PreviewDisplayScale;
-            viewModel.PreviewZoom = newZoom;
-            var newScale = viewModel.PreviewDisplayScale;
-            var scaleRatio = newScale / oldScale;
-
-            var imageCenterX = viewportCenter.X + _previewTranslateTransform.X;
-            var imageCenterY = viewportCenter.Y + _previewTranslateTransform.Y;
-
-            var dx = zoomCenter.X - imageCenterX;
-            var dy = zoomCenter.Y - imageCenterY;
-
-            _previewTranslateTransform.X -= dx * (scaleRatio - 1);
-            _previewTranslateTransform.Y -= dy * (scaleRatio - 1);
-
-            e.Handled = true;
-        }
-    }
-
-    private void OnPreviewViewportSizeChanged(object? sender, SizeChangedEventArgs e)
-    {
-        UpdatePreviewFitScale();
     }
 
     private void OnResetPreviewClicked(object? sender, RoutedEventArgs e)
@@ -414,4 +302,189 @@ public partial class MainWindow : Window
         var hasSelection = _codeEditor.SelectionLength > 0;
         _viewModel.UpdateEditorState(_codeEditor.CanUndo, _codeEditor.CanRedo, hasSelection, hasText);
     }
+
+    private void UpdateWebPreview()
+    {
+        if (_viewModel == null || _previewWebHost == null)
+        {
+            return;
+        }
+
+        if (!EnsureWebViewReady())
+        {
+            _viewModel.StatusMessage = "WebView 初始化失败，无法显示实时预览";
+            return;
+        }
+
+        var html = _viewModel.CurrentPreviewHtml;
+        if (_previewWebViewControl == null || string.IsNullOrWhiteSpace(html))
+        {
+            return;
+        }
+
+        try
+        {
+            _pendingPreviewHtml = html;
+            TryApplyPendingWebPreview();
+        }
+        catch (Exception ex)
+        {
+            _viewModel.StatusMessage = $"WebView 预览失败: {ex.Message}";
+        }
+    }
+
+    private bool EnsureWebViewReady()
+    {
+        if (_previewWebHost?.Child is WebView existingWebView)
+        {
+            _previewWebViewControl = existingWebView;
+            _webViewAttached = true;
+            return true;
+        }
+
+        if (_previewWebViewControl != null)
+        {
+            return true;
+        }
+
+        if (_webViewInitTried)
+        {
+            return false;
+        }
+        _webViewInitTried = true;
+
+        if (_previewWebHost == null)
+        {
+            return false;
+        }
+
+        try
+        {
+            _previewWebHost.Child = null;
+            var webViewControl = new WebView();
+            var webViewType = webViewControl.GetType();
+            _webViewNavigateMethod = webViewType.GetMethod("Navigate", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            _webViewSourceProperty = webViewType.GetProperty("Source", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            _webViewUrlProperty = webViewType.GetProperty("Url", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
+            webViewControl.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+            webViewControl.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
+            webViewControl.AttachedToVisualTree += (_, _) =>
+            {
+                _webViewAttached = true;
+                try
+                {
+                    TryApplyPendingWebPreview();
+                }
+                catch
+                {
+                    // 避免可视树阶段异常导致进程退出
+                }
+            };
+            _previewWebHost.Child = webViewControl;
+            _previewWebViewControl = webViewControl;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void TryApplyPendingWebPreview()
+    {
+        if (_previewWebViewControl == null || string.IsNullOrWhiteSpace(_pendingPreviewHtml))
+        {
+            return;
+        }
+
+        if (!_webViewAttached)
+        {
+            return;
+        }
+
+        EnsurePreviewFilesReady();
+        if (string.IsNullOrWhiteSpace(_previewHtmlPath))
+        {
+            throw new InvalidOperationException("预览文件初始化失败。");
+        }
+
+        File.WriteAllText(_previewHtmlPath, _pendingPreviewHtml, Encoding.UTF8);
+        var previewUri = new Uri(_previewHtmlPath);
+        var previewUriString = previewUri.AbsoluteUri;
+
+        if (_webViewNavigateMethod != null)
+        {
+            var parameters = _webViewNavigateMethod.GetParameters();
+            if (parameters.Length == 1 && parameters[0].ParameterType == typeof(string))
+            {
+                _webViewNavigateMethod.Invoke(_previewWebViewControl, new object[] { previewUriString });
+                _pendingPreviewHtml = null;
+                return;
+            }
+
+            if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Uri))
+            {
+                _webViewNavigateMethod.Invoke(_previewWebViewControl, new object[] { previewUri });
+                _pendingPreviewHtml = null;
+                return;
+            }
+        }
+
+        if (_webViewSourceProperty != null && _webViewSourceProperty.PropertyType == typeof(Uri))
+        {
+            _webViewSourceProperty.SetValue(_previewWebViewControl, previewUri);
+            _pendingPreviewHtml = null;
+            return;
+        }
+
+        if (_webViewSourceProperty != null && _webViewSourceProperty.PropertyType == typeof(string))
+        {
+            _webViewSourceProperty.SetValue(_previewWebViewControl, previewUriString);
+            _pendingPreviewHtml = null;
+            return;
+        }
+
+        if (_webViewUrlProperty != null && _webViewUrlProperty.PropertyType == typeof(Uri))
+        {
+            _webViewUrlProperty.SetValue(_previewWebViewControl, previewUri);
+            _pendingPreviewHtml = null;
+            return;
+        }
+
+        if (_webViewUrlProperty != null && _webViewUrlProperty.PropertyType == typeof(string))
+        {
+            _webViewUrlProperty.SetValue(_previewWebViewControl, previewUriString);
+            _pendingPreviewHtml = null;
+            return;
+        }
+
+        throw new InvalidOperationException("当前 WebView 版本不支持可用导航方式（Navigate/Source/Url）。");
+    }
+
+    private void EnsurePreviewFilesReady()
+    {
+        if (!string.IsNullOrWhiteSpace(_previewHtmlPath) && File.Exists(_previewHtmlPath))
+        {
+            return;
+        }
+
+        _previewTempDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Mermaider",
+            "webpreview");
+        Directory.CreateDirectory(_previewTempDir);
+
+        var scriptPath = Path.Combine(_previewTempDir, "mermaid.min.js");
+        if (!File.Exists(scriptPath))
+        {
+            var scriptUri = new Uri("avares://Mermaider/Assets/mermaid.min.js");
+            using var scriptStream = AssetLoader.Open(scriptUri);
+            using var fileStream = File.Create(scriptPath);
+            scriptStream.CopyTo(fileStream);
+        }
+
+        _previewHtmlPath = Path.Combine(_previewTempDir, "preview.html");
+    }
+
 }
