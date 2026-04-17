@@ -16,6 +16,8 @@ public class AppSettings
 
 public class SettingsService
 {
+    public const int MaxRecentFiles = 10;
+
     private static readonly string SettingsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "Mermaider",
@@ -76,10 +78,9 @@ public class SettingsService
         Settings.RecentFiles.Remove(filePath);
         Settings.RecentFiles.Insert(0, filePath);
 
-        const int maxRecentFiles = 10;
-        if (Settings.RecentFiles.Count > maxRecentFiles)
+        if (Settings.RecentFiles.Count > MaxRecentFiles)
         {
-            Settings.RecentFiles = Settings.RecentFiles.Take(maxRecentFiles).ToList();
+            Settings.RecentFiles = Settings.RecentFiles.Take(MaxRecentFiles).ToList();
         }
 
         Save();

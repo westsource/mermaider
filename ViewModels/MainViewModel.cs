@@ -506,6 +506,12 @@ public partial class MainViewModel : ViewModelBase
         var (content, filePath) = await _fileService.OpenFileAsync();
         if (content != null)
         {
+            if (TrySelectExistingTabByPath(filePath))
+            {
+                StatusMessage = "文件已打开，已切换到对应标签页";
+                return;
+            }
+
             var tab = new TabItem
             {
                 Content = content,
@@ -526,6 +532,12 @@ public partial class MainViewModel : ViewModelBase
 
     public async Task OpenFileFromPath(string filePath)
     {
+        if (TrySelectExistingTabByPath(filePath))
+        {
+            StatusMessage = "文件已打开，已切换到对应标签页";
+            return;
+        }
+
         var content = await _fileService.OpenFileFromPathAsync(filePath);
         if (content != null)
         {
@@ -578,8 +590,7 @@ public partial class MainViewModel : ViewModelBase
         var item = new RecentFileItem(filePath);
         RecentFiles.Insert(0, item);
 
-        const int maxRecentFiles = 10;
-        while (RecentFiles.Count > maxRecentFiles)
+        while (RecentFiles.Count > SettingsService.MaxRecentFiles)
         {
             RecentFiles.RemoveAt(RecentFiles.Count - 1);
         }
@@ -618,7 +629,61 @@ public partial class MainViewModel : ViewModelBase
         CurrentTab.FilePath = filePath;
         CurrentTab.IsModified = false;
         CurrentTab.UpdateHeader();
+        AddToRecentFiles(filePath);
         StatusMessage = "已保存";
+    }
+
+    private bool TrySelectExistingTabByPath(string? filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return false;
+        }
+
+        string normalizedPath;
+        try
+        {
+            normalizedPath = Path.GetFullPath(filePath);
+        }
+        catch
+        {
+            normalizedPath = filePath;
+        }
+
+        var existingTab = Tabs.FirstOrDefault(tab =>
+        {
+            if (string.IsNullOrWhiteSpace(tab.FilePath))
+            {
+                return false;
+            }
+
+            try
+            {
+                return string.Equals(
+                    Path.GetFullPath(tab.FilePath),
+                    normalizedPath,
+                    StringComparison.OrdinalIgnoreCase
+                );
+            }
+            catch
+            {
+                return string.Equals(tab.FilePath, filePath, StringComparison.OrdinalIgnoreCase);
+            }
+        });
+
+        if (existingTab == null)
+        {
+            return false;
+        }
+
+        var existingIndex = Tabs.IndexOf(existingTab);
+        if (existingIndex >= 0)
+        {
+            SelectedTabIndex = existingIndex;
+            return true;
+        }
+
+        return false;
     }
 
     [RelayCommand]
