@@ -1,0 +1,93 @@
+flowchart TD
+    Start([用户触发打开文件]) --> CheckMethod{打开方式?}
+    
+    CheckMethod -->|菜单打开| MenuOpen["点击 文件 → 打开"]
+    CheckMethod -->|命令行参数| CmdOpen["MainViewModel.OpenFileFromPath(filePath)"]
+    CheckMethod -->|最近文件| RecentOpen["点击最近文件列表"]
+    
+    subgraph FileSelect[文件选择阶段]
+        MenuOpen --> ShowDialog["FileService.OpenFileAsync()<br/>显示文件选择对话框"]
+        ShowDialog --> SelectFile["选择 .mmd 文件"]
+        SelectFile --> GetContent1["返回 (content, filePath)"]
+        
+        CmdOpen --> ReadFile1["FileService.OpenFileFromPathAsync(filePath)<br/>直接读取指定路径文件"]
+        ReadFile1 --> GetContent2["返回 content"]
+        
+        RecentOpen --> CheckExists{"File.Exists(filePath)?"}
+        CheckExists -->|否| RemoveRecent["RemoveFromRecentFiles(filePath)<br/>从最近列表移除"]
+        CheckExists -->|是| ReadFile2["FileService.OpenFileFromPathAsync(filePath)"]
+        RemoveRecent --> ShowError["StatusMessage = 文件不存在"]
+        ReadFile2 --> GetContent3["返回 content"]
+    end
+    
+    GetContent1 --> CheckOpened
+    GetContent2 --> CheckOpened
+    GetContent3 --> CheckOpened
+    
+    subgraph TabProcess[标签页处理]
+        CheckOpened{"TrySelectExistingTabByPath(filePath)<br/>文件是否已在标签页中?"}
+        CheckOpened -->|是| SwitchTab["SelectedTabIndex = existingIndex<br/>切换到已存在标签页"]
+        CheckOpened -->|否| CreateTab["new TabItem{Content, FilePath}"]
+        
+        CreateTab --> SetContent["tab.Content = content<br/>tab.FilePath = filePath"]
+        SetContent --> UpdateHeader["tab.UpdateHeader()<br/>更新标签页标题"]
+        UpdateHeader --> AddToTabs["Tabs.Add(tab)"]
+        AddToTabs --> SetSelected["SelectedTabIndex = Tabs.Count - 1"]
+        SetSelected --> AddRecent["AddToRecentFiles(filePath)"]
+    end
+    
+    SwitchTab --> End([完成])
+    AddRecent --> ValidateRender
+    
+    subgraph RenderProcess[验证与渲染]
+        ValidateRender["ValidateAndRenderTab(tab)"] --> CheckEmpty{"string.IsNullOrWhiteSpace(tab.Content)?"}
+        CheckEmpty -->|是| SetEmptyHtml["tab.WebPreviewHtml = BuildPreviewHtml(string.Empty)"]
+        CheckEmpty -->|否| BuildHtml["tab.WebPreviewHtml = BuildPreviewHtml(content)<br/>生成预览 HTML"]
+        
+        SetEmptyHtml --> UpdateCurrentHtml["CurrentPreviewHtml = tab.WebPreviewHtml"]
+        BuildHtml --> UpdateCurrentHtml
+    end
+    
+    UpdateCurrentHtml --> PropertyChanged["OnPropertyChanged(nameof(CurrentPreviewHtml))<br/>触发 PropertyChanged 事件"]
+    
+    subgraph WebViewProcess[WebView 处理]
+        PropertyChanged --> OnVMChanged["MainWindow.OnViewModelPropertyChanged()<br/>e.PropertyName == CurrentPreviewHtml"]
+        OnVMChanged --> CallUpdatePreview["UpdateWebPreview()"]
+        CallUpdatePreview --> CheckContentEmpty{"string.IsNullOrWhiteSpace(CurrentTab?.Content)?"}
+        
+        CheckContentEmpty -->|是且 WebView 未创建| ReturnSkip["return<br/>不创建 WebView"]
+        CheckContentEmpty -->|否| CheckWVExists{"_previewWebViewControl != null?"}
+        
+        CheckWVExists -->|否| InitWebView["EnsureWebViewReady()"]
+        CheckWVExists -->|是| ApplyPreview
+        InitWebView --> CheckBounds{"_previewWebHost.Bounds<br/>Width/Height > 0?"}
+        CheckBounds -->|否| ReturnSkip
+        CheckBounds -->|是| CreateWV["new WebView()"]
+        CreateWV --> SetProps["设置 HorizontalAlignment/VerticalAlignment"]
+        SetProps --> AttachEvent["AttachedToVisualTree += 事件"]
+        AttachEvent --> SetChild["_previewWebHost.Child = webViewControl"]
+        SetChild --> ApplyPreview["TryApplyPendingWebPreview()"]
+    end
+    
+    ReturnSkip --> End
+    
+    subgraph ApplyContent[应用预览内容]
+        ApplyPreview --> EnsureFiles["EnsurePreviewFilesReady()<br/>确保 mermaid.min.js 存在"]
+        EnsureFiles --> CheckScript{"File.Exists(mermaid.min.js)?"}
+        CheckScript -->|否| CopyScript["AssetLoader.Open(avares://Mermaider/Assets/mermaid.min.js)<br/>复制到临时目录"]
+        CheckScript -->|是| WriteHtml
+        CopyScript --> WriteHtml["File.WriteAllText(_previewHtmlPath, html)"]
+        WriteHtml --> Navigate["_webViewNavigateMethod.Invoke(webViewControl, [uri?t=timestamp])<br/>带时间戳参数"]
+    end
+    
+    Navigate --> LoadHtml["WebView 加载 HTML 页面"]
+    LoadHtml --> ExecJS["执行 JavaScript"]
+    ExecJS --> CheckCodeEmpty{"!code || !code.trim()?"}
+    
+    CheckCodeEmpty -->|是| ClearTarget["target.innerHTML = ''<br/>清空 diagram 容器"]
+    CheckCodeEmpty -->|否| MermaidInit["mermaid.initialize({startOnLoad: false, ...})"]
+    MermaidInit --> MermaidRender["mermaid.render(id, code, container)"]
+    MermaidRender --> ShowDiagram["target.innerHTML = svg<br/>显示 Mermaid 图表"]
+    
+    ClearTarget --> End
+    ShowDiagram --> End
