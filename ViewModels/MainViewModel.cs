@@ -871,12 +871,7 @@ public partial class MainViewModel : ViewModelBase
 
     private static string GetDefaultMermaidCode()
     {
-        return @"graph TD
-    A[开始] --> B{判断}
-    B -->|是| C[处理A]
-    B -->|否| D[处理B]
-    C --> E[结束]
-    D --> E";
+        return string.Empty;
     }
 
     private static string BuildPreviewHtml(string mermaidCode)
@@ -1021,13 +1016,24 @@ public partial class MainViewModel : ViewModelBase
 
     (async () => {
       try {
+        if (!code || !code.trim()) {
+          target.innerHTML = '';
+          return;
+        }
         if (!window.mermaid) {
           showError('未加载到本地 mermaid.js 资源');
           return;
         }
         mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'default' });
-        const { svg } = await mermaid.render(`mermaid-${Date.now()}`, code);
+        const id = `mermaid-${Date.now()}`;
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.top = '-9999px';
+        container.style.left = '-9999px';
+        document.body.appendChild(container);
+        const { svg } = await mermaid.render(id, code, container);
         target.innerHTML = svg;
+        container.remove();
         requestAnimationFrame(() => fitToViewport());
       } catch (err) {
         showError(err && err.message ? err.message : err);

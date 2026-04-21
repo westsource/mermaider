@@ -190,6 +190,7 @@ public partial class MainWindow : Window
     private void OnWorkspaceSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         UpdateWorkspaceLayout();
+        UpdateWebPreview();
     }
 
     private void UpdatePreviewFitScale()
@@ -310,6 +311,15 @@ public partial class MainWindow : Window
             return;
         }
 
+        // 如果当前没有 Mermaid 代码需要渲染，且 WebView 还未创建，则推迟创建
+        if (string.IsNullOrWhiteSpace(_viewModel.CurrentTab?.Content))
+        {
+            if (_previewWebViewControl == null)
+            {
+                return;
+            }
+        }
+
         if (!EnsureWebViewReady())
         {
             _viewModel.StatusMessage = "WebView 初始化失败，无法显示实时预览";
@@ -347,16 +357,22 @@ public partial class MainWindow : Window
             return true;
         }
 
+        if (_previewWebHost == null)
+        {
+            return false;
+        }
+
+        if (_previewWebHost.Bounds.Width == 0 || _previewWebHost.Bounds.Height == 0)
+        {
+            // Delay initialization until the container has valid size to avoid orphaned HWND bugs in WebView2
+            return false;
+        }
+
         if (_webViewInitTried)
         {
             return false;
         }
         _webViewInitTried = true;
-
-        if (_previewWebHost == null)
-        {
-            return false;
-        }
 
         try
         {
@@ -411,7 +427,8 @@ public partial class MainWindow : Window
 
         File.WriteAllText(_previewHtmlPath, _pendingPreviewHtml, Encoding.UTF8);
         var previewUri = new Uri(_previewHtmlPath);
-        var previewUriString = previewUri.AbsoluteUri;
+        var previewUriString = previewUri.AbsoluteUri + "?t=" + DateTime.Now.Ticks;
+        var cacheBustedUri = new Uri(previewUriString);
 
         if (_webViewNavigateMethod != null)
         {
@@ -425,7 +442,7 @@ public partial class MainWindow : Window
 
             if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Uri))
             {
-                _webViewNavigateMethod.Invoke(_previewWebViewControl, new object[] { previewUri });
+                _webViewNavigateMethod.Invoke(_previewWebViewControl, new object[] { cacheBustedUri });
                 _pendingPreviewHtml = null;
                 return;
             }
@@ -433,7 +450,7 @@ public partial class MainWindow : Window
 
         if (_webViewSourceProperty != null && _webViewSourceProperty.PropertyType == typeof(Uri))
         {
-            _webViewSourceProperty.SetValue(_previewWebViewControl, previewUri);
+            _webViewSourceProperty.SetValue(_previewWebViewControl, cacheBustedUri);
             _pendingPreviewHtml = null;
             return;
         }
@@ -447,7 +464,7 @@ public partial class MainWindow : Window
 
         if (_webViewUrlProperty != null && _webViewUrlProperty.PropertyType == typeof(Uri))
         {
-            _webViewUrlProperty.SetValue(_previewWebViewControl, previewUri);
+            _webViewUrlProperty.SetValue(_previewWebViewControl, cacheBustedUri);
             _pendingPreviewHtml = null;
             return;
         }
