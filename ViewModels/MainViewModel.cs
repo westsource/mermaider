@@ -64,6 +64,9 @@ public partial class MainViewModel : ViewModelBase
     private double _editorPanelWidth = 640;
 
     [ObservableProperty]
+    private bool _isEditorVisible = true;
+
+    [ObservableProperty]
     private bool _isRendering;
 
     [ObservableProperty]
@@ -146,6 +149,11 @@ public partial class MainViewModel : ViewModelBase
             }
             ScheduleValidationAndRender(CurrentTab);
         }
+    }
+
+    partial void OnIsEditorVisibleChanged(bool value)
+    {
+        OnPropertyChanged(nameof(EditorPanelWidth));
     }
 
     public MainViewModel(MermaidService mermaidService, FileService fileService, SettingsService settingsService, IStorageProvider storageProvider, Window ownerWindow)
@@ -854,6 +862,12 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
+        if (!IsEditorVisible)
+        {
+            EditorPanelWidth = 0;
+            return;
+        }
+
         const double splitterWidth = 5;
         const double minEditorWidth = 420;
         const double maxEditorWidth = 860;
@@ -881,9 +895,28 @@ public partial class MainViewModel : ViewModelBase
         CanSelectAllAction = false;
     }
 
+    [RelayCommand]
+    private void ToggleEditorVisibility()
+    {
+        IsEditorVisible = !IsEditorVisible;
+    }
+
     private static string GetDefaultMermaidCode()
     {
         return string.Empty;
+    }
+
+    public void SetInitialContent()
+    {
+        if (CurrentTab != null)
+        {
+            CurrentTab.Content = @"graph TD
+    A[开始] --> B{判断}
+    B -->|是| C[处理A]
+    B -->|否| D[处理B]
+    C --> E[结束]
+    D --> E";
+        }
     }
 
     private static string BuildPreviewHtml(string mermaidCode)

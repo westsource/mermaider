@@ -177,6 +177,15 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnSplitterTapped(object? sender, TappedEventArgs e)
+    {
+        if (_viewModel != null)
+        {
+            _viewModel.ToggleEditorVisibilityCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
     private void OnResetPreviewClicked(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel viewModel)
