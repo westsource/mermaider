@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -311,7 +312,12 @@ public partial class MainWindow : Window
             return;
         }
 
-        // 如果当前没有 Mermaid 代码需要渲染，且 WebView 还未创建，则推迟创建
+        var html = _viewModel.CurrentPreviewHtml;
+        if (string.IsNullOrWhiteSpace(html))
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(_viewModel.CurrentTab?.Content))
         {
             if (_previewWebViewControl == null)
@@ -326,8 +332,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var html = _viewModel.CurrentPreviewHtml;
-        if (_previewWebViewControl == null || string.IsNullOrWhiteSpace(html))
+        if (_previewWebViewControl == null)
         {
             return;
         }
@@ -388,14 +393,17 @@ public partial class MainWindow : Window
             webViewControl.AttachedToVisualTree += (_, _) =>
             {
                 _webViewAttached = true;
-                try
+                Dispatcher.UIThread.Post(async () =>
                 {
-                    TryApplyPendingWebPreview();
-                }
-                catch
-                {
-                    // 避免可视树阶段异常导致进程退出
-                }
+                    await Task.Delay(500);
+                    try
+                    {
+                        TryApplyPendingWebPreview();
+                    }
+                    catch
+                    {
+                    }
+                }, DispatcherPriority.Background);
             };
             _previewWebHost.Child = webViewControl;
             _previewWebViewControl = webViewControl;

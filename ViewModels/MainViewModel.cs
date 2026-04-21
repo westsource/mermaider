@@ -133,10 +133,17 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(PreviewDisplayScale));
         OnPropertyChanged(nameof(ZoomText));
         OnPropertyChanged(nameof(CurrentTab));
-        CurrentPreviewHtml = CurrentTab?.WebPreviewHtml ?? BuildPreviewHtml(string.Empty);
 
         if (CurrentTab != null)
         {
+            if (!string.IsNullOrWhiteSpace(CurrentTab.WebPreviewHtml))
+            {
+                CurrentPreviewHtml = CurrentTab.WebPreviewHtml;
+            }
+            else
+            {
+                CurrentPreviewHtml = string.Empty;
+            }
             ScheduleValidationAndRender(CurrentTab);
         }
     }
@@ -182,7 +189,6 @@ public partial class MainViewModel : ViewModelBase
         tab.ContentChanged += OnTabContentChanged;
         Tabs.Add(tab);
         SelectTab(Tabs.Count - 1, forceNotify: true);
-        ScheduleValidationAndRender(tab);
     }
 
     private void SelectTab(int index, bool forceNotify = false)
@@ -198,7 +204,15 @@ public partial class MainViewModel : ViewModelBase
             }
 
             OnPropertyChanged(nameof(CurrentTab));
-            CurrentPreviewHtml = CurrentTab?.WebPreviewHtml ?? BuildPreviewHtml(string.Empty);
+
+            if (CurrentTab != null)
+            {
+                if (!string.IsNullOrWhiteSpace(CurrentTab.WebPreviewHtml))
+                {
+                    CurrentPreviewHtml = CurrentTab.WebPreviewHtml;
+                }
+                ScheduleValidationAndRender(CurrentTab);
+            }
         }
     }
 
@@ -505,7 +519,6 @@ public partial class MainViewModel : ViewModelBase
             tab.UpdateHeader();
             Tabs.Add(tab);
             SelectedTabIndex = Tabs.Count - 1;
-            await ValidateAndRenderTab(tab);
 
             if (!string.IsNullOrEmpty(filePath))
             {
@@ -534,7 +547,6 @@ public partial class MainViewModel : ViewModelBase
             tab.UpdateHeader();
             Tabs.Add(tab);
             SelectedTabIndex = Tabs.Count - 1;
-            await ValidateAndRenderTab(tab);
 
             AddToRecentFiles(filePath);
         }
