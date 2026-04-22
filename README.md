@@ -1,32 +1,39 @@
 # Mermaider - Mermaid 图表编辑器
 
-一个基于 C# Avalonia 构建的本地 Mermaid 图表编辑器，支持实时预览和语法检测。
+一个基于 C# Avalonia 构建的本地 Mermaid 图表编辑器，支持实时预览、语法检测和图片导出。
 
 ## 功能特性
 
 ### 核心功能
-- **代码编辑** - 编辑Mermaid代码
-- **实时预览** - 编辑代码时自动更新图表预览
+- **代码编辑** - 编辑 Mermaid 代码，支持语法高亮和行号显示
+- **实时预览** - 编辑代码时自动更新图表预览（基于 WebView + Mermaid.js）
 - **语法检测** - 实时检测 Mermaid 语法错误并提示
 - **语法高亮** - 支持 Mermaid 语法高亮显示
-- **多标签页** - 支持多标签页编辑Mermaid代码和展示，各标签页独立包含一组Mermaid代码和展示
+- **多标签页** - 支持多标签页编辑 Mermaid 代码和展示，各标签页独立
+- **智能防抖渲染** - 输入后自动延迟渲染（350ms），避免频繁刷新
+- **复制图片** - 将图表复制到剪贴板（高清，3倍缩放）
+- **保存图片** - 支持多种格式导出
+  - PNG 图片（高清，3倍缩放）
+  - JPEG 图片（高清，3倍缩放）
+  
+### 预览交互
+- **拖拽平移** - 在预览区按住鼠标左键拖拽移动图表
+- **滚轮缩放** - 在预览区使用鼠标滚轮缩放图表
+- **双击适应** - 双击预览区自动适应视口大小
+- **编辑器切换** - 点击分隔条可隐藏/显示编辑器，获得全屏预览
 
 ### 文件操作
 - 新建 / 打开 / 保存 Mermaid 文件（.mmd / .mermaid）
 - 支持命令行参数打开文件
 - 最近文件记录（最多10个）
-
-### 导出功能
-- **复制图片** - 将图表复制到剪贴板（高清，3倍缩放）
-- **保存图片** - 支持多种格式导出
-  - PNG 图片（高清，3倍缩放）
-  - JPEG 图片（高清，3倍缩放）
+- 关闭未保存标签时弹出保存确认对话框
+- 重复打开同一文件时自动切换到已有标签页
 
 ### 界面特性
-- 可缩放预览图片（Ctrl + 鼠标滚轮缩放）
-- 可调整编辑器与预览区分隔比例
+- 可调整编辑器与预览区分隔比例（拖拽分隔条）
 - 现代化 Fluent 主题界面
-- 自动保存窗口布局设置
+- 自动保存窗口布局设置（编辑器比例、缩放级别等）
+- 崩溃日志自动记录
 
 ## 技术栈
 
@@ -34,7 +41,9 @@
 - **UI 框架**: Avalonia UI 11.3
 - **架构模式**: MVVM (CommunityToolkit.Mvvm)
 - **代码编辑器**: AvaloniaEdit
-- **图表渲染**: Mermaid CLI 11.12.0 (嵌入式)
+- **预览渲染**: Mermaid.js（通过 WebView 实时渲染）
+- **图片导出**: Mermaid CLI 11.12.0（嵌入式，用于高清图片导出）
+- **WebView**: WebView.Avalonia
 
 ## 环境要求
 
@@ -43,7 +52,8 @@
 - Avalonia 模板
 
 ### 运行打包版本
-- 无需任何依赖，双击即可运行（Self-Contained）
+- Windows 系统（需内置 WebView2 运行时，Windows 10/11 已预装）
+- 无需安装 Node.js 或其他依赖，Self-Contained 双击即可运行
 
 ## 构建项目
 
@@ -62,11 +72,19 @@ dotnet run -- example.mmd
 
 ### 发布 Self-Contained 版本
 
+使用项目自带的发布脚本：
+
+```powershell
+.\publish.ps1
+```
+
+或手动执行：
+
 ```bash
 dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
 ```
 
-发布后需要将 `tools` 目录复制到发布目录中。
+> 提示：Mermaid CLI 工具已作为嵌入式资源打包，无需额外复制 `tools` 目录。
 
 ## 使用说明
 
@@ -89,13 +107,15 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 
 ### 导出图片
 
-- 点击预览区右上角的"拷贝"按钮复制图片到剪贴板
 - 点击预览区右上角的"保存"按钮保存图片文件
+- 点击预览区右上角的"复制"按钮复制图片到剪贴板
 
 ### 预览操作
 
-- **缩放**：Ctrl + 鼠标滚轮向上放大，向下缩小
-- **重置**：视图 → 重置缩放（Ctrl+0）
+- **拖拽平移**：在预览区按住鼠标左键拖拽
+- **缩放**：在预览区使用鼠标滚轮（向上放大，向下缩小）
+- **双击适应**：双击预览区自动适应视口
+- **隐藏/显示编辑器**：点击编辑器与预览区之间的分隔条
 
 ## 示例代码
 
@@ -180,14 +200,11 @@ gantt
 | Ctrl+W | 关闭当前标签 |
 | Ctrl+Q | 退出程序 |
 | Ctrl+Z | 撤销 |
-| Ctrl+Y | 重做 |
+| Ctrl+Y / Ctrl+Shift+Z | 重做 |
 | Ctrl+X | 剪切 |
 | Ctrl+C | 复制 |
 | Ctrl+V | 粘贴 |
 | Ctrl+A | 全选 |
-| Ctrl++ | 放大预览 |
-| Ctrl+- | 缩小预览 |
-| Ctrl+0 | 重置缩放 |
 
 ## 许可证
 
@@ -199,5 +216,7 @@ gantt
 
 - [Avalonia UI](https://avaloniaui.net/) - 跨平台 UI 框架
 - [AvaloniaEdit](https://github.com/AvaloniaUI/AvaloniaEdit) - 代码编辑器控件
-- [Mermaid CLI](https://github.com/mermaid-js/mermaid-cli) - Mermaid 图表渲染引擎
+- [Mermaid.js](https://mermaid.js.org/) - Mermaid 图表渲染引擎（预览）
+- [Mermaid CLI](https://github.com/mermaid-js/mermaid-cli) - Mermaid 图表渲染引擎（导出）
+- [WebView.Avalonia](https://github.com/AvaloniaUI/AvaloniaWebView) - WebView 控件
 - [CommunityToolkit.Mvvm](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/) - MVVM 工具包

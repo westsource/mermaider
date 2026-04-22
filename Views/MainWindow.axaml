@@ -149,20 +149,19 @@
                             Cursor="SizeWestEast"
                             PointerPressed="OnSplitterPointerPressed"
                             PointerMoved="OnSplitterPointerMoved"
-                            PointerReleased="OnSplitterPointerReleased"
-                            Tapped="OnSplitterTapped">
-                        <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
+                            PointerReleased="OnSplitterPointerReleased">
+                        <Grid VerticalAlignment="Center" HorizontalAlignment="Center"
+                              Cursor="Hand"
+                              Tapped="OnToggleTriangleTapped">
                             <Path Data="M 0,0 L 4,4 L 0,8 Z"
                                   Fill="#999999"
                                   HorizontalAlignment="Left"
                                   Margin="0,0,0,0"
-                                  Cursor="Hand"
                                   IsVisible="{Binding !IsEditorVisible}"/>
                             <Path Data="M 4,0 L 0,4 L 4,8 Z"
                                   Fill="#999999"
                                   HorizontalAlignment="Right"
                                   Margin="0,0,0,0"
-                                  Cursor="Hand"
                                   IsVisible="{Binding IsEditorVisible}"/>
                         </Grid>
                     </Border>

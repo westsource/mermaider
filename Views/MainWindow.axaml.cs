@@ -36,6 +36,7 @@ public partial class MainWindow : Window
     private bool _webViewInitTried;
 
     private bool _isDraggingSplitter;
+    private bool _splitterDragStarted;
     private double _splitterStartX;
     private double _editorStartWidth;
 
@@ -135,10 +136,9 @@ public partial class MainWindow : Window
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
             _isDraggingSplitter = true;
+            _splitterDragStarted = false;
             _splitterStartX = e.GetPosition(this).X;
             _editorStartWidth = _viewModel?.EditorPanelWidth ?? 640;
-            e.Pointer.Capture(_splitterBorder);
-            e.Handled = true;
         }
     }
 
@@ -149,6 +149,15 @@ public partial class MainWindow : Window
 
         var currentX = e.GetPosition(this).X;
         var deltaX = currentX - _splitterStartX;
+
+        if (!_splitterDragStarted)
+        {
+            if (Math.Abs(deltaX) < 3)
+                return;
+            _splitterDragStarted = true;
+            e.Pointer.Capture(_splitterBorder);
+        }
+
         var totalWidth = _workspaceGrid.Bounds.Width;
         var splitterWidth = 5;
 
@@ -171,13 +180,16 @@ public partial class MainWindow : Window
     {
         if (_isDraggingSplitter)
         {
+            var wasDragStarted = _splitterDragStarted;
             _isDraggingSplitter = false;
+            _splitterDragStarted = false;
             e.Pointer.Capture(null);
-            e.Handled = true;
+            if (wasDragStarted)
+                e.Handled = true;
         }
     }
 
-    private void OnSplitterTapped(object? sender, TappedEventArgs e)
+    private void OnToggleTriangleTapped(object? sender, TappedEventArgs e)
     {
         if (_viewModel != null)
         {

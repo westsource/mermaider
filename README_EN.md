@@ -1,20 +1,29 @@
 # Mermaider - Mermaid Diagram Editor
 
-A local Mermaid diagram editor built with C# Avalonia, featuring real-time preview and syntax validation.
+A local Mermaid diagram editor built with C# Avalonia, featuring real-time preview, syntax validation, and image export.
 
 ## Features
 
 ### Core Features
-- **Code Editing** - Edit Mermaid code with ease
-- **Real-time Preview** - Automatic diagram preview updates while editing
+- **Code Editing** - Edit Mermaid code with syntax highlighting and line numbers
+- **Real-time Preview** - Automatic diagram preview updates while editing (via WebView + Mermaid.js)
 - **Syntax Validation** - Real-time Mermaid syntax error detection and feedback
 - **Syntax Highlighting** - Mermaid syntax highlighting support
 - **Multi-tab Support** - Edit multiple Mermaid diagrams with independent tabs
+- **Debounced Rendering** - Auto-renders after 350ms of inactivity to avoid excessive refreshes
+
+### Preview Interaction
+- **Drag to Pan** - Hold left mouse button and drag to move the diagram in the preview area
+- **Scroll to Zoom** - Use mouse wheel to zoom in/out in the preview area
+- **Double-click to Fit** - Double-click the preview area to auto-fit the diagram to the viewport
+- **Editor Toggle** - Click the splitter bar to hide/show the editor for full-screen preview
 
 ### File Operations
 - Create / Open / Save Mermaid files (.mmd / .mermaid)
 - Command-line argument support for opening files
 - Recent files history (up to 10 files)
+- Save confirmation dialog when closing unsaved tabs
+- Automatically switches to existing tab when reopening the same file
 
 ### Export Features
 - **Copy Image** - Copy diagram to clipboard (high resolution, 3x scale)
@@ -23,10 +32,10 @@ A local Mermaid diagram editor built with C# Avalonia, featuring real-time previ
   - JPEG image (high resolution, 3x scale)
 
 ### UI Features
-- Zoomable preview (Ctrl + mouse wheel)
-- Resizable editor/preview splitter
+- Resizable editor/preview splitter (drag the splitter bar)
 - Modern Fluent theme interface
-- Auto-save window layout settings
+- Auto-save window layout settings (editor ratio, zoom level, etc.)
+- Automatic crash log recording
 
 ## Tech Stack
 
@@ -34,7 +43,9 @@ A local Mermaid diagram editor built with C# Avalonia, featuring real-time previ
 - **UI Framework**: Avalonia UI 11.3
 - **Architecture**: MVVM (CommunityToolkit.Mvvm)
 - **Code Editor**: AvaloniaEdit
-- **Diagram Rendering**: Mermaid CLI 11.12.0 (embedded)
+- **Preview Rendering**: Mermaid.js (real-time rendering via WebView)
+- **Image Export**: Mermaid CLI 11.12.0 (embedded, for high-res image export)
+- **WebView**: WebView.Avalonia
 
 ## Requirements
 
@@ -43,7 +54,8 @@ A local Mermaid diagram editor built with C# Avalonia, featuring real-time previ
 - Avalonia templates
 
 ### Running Packaged Version
-- No dependencies required, self-contained executable
+- Windows (requires WebView2 runtime, pre-installed on Windows 10/11)
+- No Node.js or other dependencies required — self-contained, just run the executable
 
 ## Building
 
@@ -62,11 +74,19 @@ dotnet run -- example.mmd
 
 ### Publish Self-Contained Version
 
+Use the included publish script:
+
+```powershell
+.\publish.ps1
+```
+
+Or manually:
+
 ```bash
 dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
 ```
 
-After publishing, copy the `tools` directory to the output folder.
+> Note: Mermaid CLI tools are embedded as resources — no need to manually copy the `tools` directory.
 
 ## Usage
 
@@ -89,13 +109,15 @@ Enter or modify Mermaid code in the left editor panel. The right preview area up
 
 ### Exporting Images
 
-- Click the "Copy" button in the preview area to copy image to clipboard
 - Click the "Save" button in the preview area to save image file
+- Click the "Copy" button in the preview area to copy image to clipboard
 
 ### Preview Controls
 
-- **Zoom**: Ctrl + mouse wheel up to zoom in, down to zoom out
-- **Reset**: View → Reset Zoom (Ctrl+0)
+- **Pan**: Hold left mouse button and drag in the preview area
+- **Zoom**: Scroll mouse wheel in the preview area (up to zoom in, down to zoom out)
+- **Fit to Viewport**: Double-click the preview area
+- **Toggle Editor**: Click the splitter bar between editor and preview
 
 ## Example Code
 
@@ -180,14 +202,11 @@ gantt
 | Ctrl+W | Close Current Tab |
 | Ctrl+Q | Exit |
 | Ctrl+Z | Undo |
-| Ctrl+Y | Redo |
+| Ctrl+Y / Ctrl+Shift+Z | Redo |
 | Ctrl+X | Cut |
 | Ctrl+C | Copy |
 | Ctrl+V | Paste |
 | Ctrl+A | Select All |
-| Ctrl++ | Zoom In Preview |
-| Ctrl+- | Zoom Out Preview |
-| Ctrl+0 | Reset Zoom |
 
 ## License
 
@@ -199,5 +218,7 @@ This project uses the following open-source projects:
 
 - [Avalonia UI](https://avaloniaui.net/) - Cross-platform UI framework
 - [AvaloniaEdit](https://github.com/AvaloniaUI/AvaloniaEdit) - Code editor control
-- [Mermaid CLI](https://github.com/mermaid-js/mermaid-cli) - Mermaid diagram rendering engine
+- [Mermaid.js](https://mermaid.js.org/) - Mermaid diagram rendering engine (preview)
+- [Mermaid CLI](https://github.com/mermaid-js/mermaid-cli) - Mermaid diagram rendering engine (export)
+- [WebView.Avalonia](https://github.com/AvaloniaUI/AvaloniaWebView) - WebView control
 - [CommunityToolkit.Mvvm](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/) - MVVM toolkit
