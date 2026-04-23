@@ -126,7 +126,7 @@
             </Border>
 
             <Border Grid.Row="1" Background="#FFFFFF">
-                <Grid x:Name="WorkspaceGrid" ColumnDefinitions="Auto,Auto,*" SizeChanged="OnWorkspaceSizeChanged">
+                <Grid x:Name="WorkspaceGrid" ColumnDefinitions="Auto,Auto,*" SizeChanged="OnWorkspaceSizeChanged" ClipToBounds="False">
                     <Border Grid.Column="0" Background="#FFFFFF" Width="{Binding EditorPanelWidth}" MinWidth="0"
                             IsVisible="{Binding IsEditorVisible}">
                         <avaloniaEdit:TextEditor x:Name="CodeEditor"
@@ -149,19 +149,22 @@
                             Cursor="SizeWestEast"
                             PointerPressed="OnSplitterPointerPressed"
                             PointerMoved="OnSplitterPointerMoved"
-                            PointerReleased="OnSplitterPointerReleased">
-                        <Grid VerticalAlignment="Center" HorizontalAlignment="Center"
-                              Cursor="Hand"
-                              Tapped="OnToggleTriangleTapped">
+                            PointerReleased="OnSplitterPointerReleased"/>
+
+                    <Border Grid.Column="1"
+                            ZIndex="10"
+                            VerticalAlignment="Center" HorizontalAlignment="Center"
+                            Width="12" Height="24"
+                            Background="#D6D6D6"
+                            CornerRadius="4"
+                            Cursor="Hand"
+                            Tapped="OnToggleTriangleTapped">
+                        <Grid Width="4" Height="8">
                             <Path Data="M 0,0 L 4,4 L 0,8 Z"
                                   Fill="#999999"
-                                  HorizontalAlignment="Left"
-                                  Margin="0,0,0,0"
                                   IsVisible="{Binding !IsEditorVisible}"/>
                             <Path Data="M 4,0 L 0,4 L 4,8 Z"
                                   Fill="#999999"
-                                  HorizontalAlignment="Right"
-                                  Margin="0,0,0,0"
                                   IsVisible="{Binding IsEditorVisible}"/>
                         </Grid>
                     </Border>
