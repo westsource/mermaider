@@ -34,6 +34,7 @@ public partial class MainWindow : Window
     private string? _previewHtmlPath;
     private bool _webViewAttached;
     private bool _webViewInitTried;
+    private bool _isClosing;
 
     private bool _isDraggingSplitter;
     private bool _splitterDragStarted;
@@ -49,6 +50,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
         AttachPreviewHandlers();
+        Closing += OnClosing;
     }
 
     private void InitializeComponent()
@@ -128,6 +130,31 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel viewModel)
         {
             viewModel.SaveSettings();
+        }
+    }
+
+    private async void OnClosing(object? sender, WindowClosingEventArgs e)
+    {
+        if (_isClosing)
+        {
+            return;
+        }
+
+        if (DataContext is MainViewModel viewModel && viewModel.HasUnsavedChanges)
+        {
+            e.Cancel = true;
+            _isClosing = true;
+
+            var canClose = await viewModel.ConfirmCloseAsync();
+            if (canClose)
+            {
+                viewModel.SaveSettings();
+                Close();
+            }
+            else
+            {
+                _isClosing = false;
+            }
         }
     }
 

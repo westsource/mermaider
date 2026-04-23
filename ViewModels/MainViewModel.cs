@@ -765,10 +765,43 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
-    private void Exit()
+    public bool HasUnsavedChanges => Tabs.Any(t => t.IsModified);
+
+    public async Task<bool> ConfirmCloseAsync()
     {
-        (Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+        var modifiedTabs = Tabs.Where(t => t.IsModified).ToList();
+        if (modifiedTabs.Count == 0)
+        {
+            return true;
+        }
+
+        foreach (var tab in modifiedTabs)
+        {
+            var result = await ShowSaveChangesDialogAsync(tab);
+            if (result == SaveChangesDialogResult.Cancel)
+            {
+                return false;
+            }
+            if (result == SaveChangesDialogResult.Save)
+            {
+                var saved = await SaveTabAsync(tab);
+                if (!saved)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    [RelayCommand]
+    private async Task Exit()
+    {
+        if (await ConfirmCloseAsync())
+        {
+            (Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+        }
     }
 
     [RelayCommand]
@@ -916,6 +949,8 @@ public partial class MainViewModel : ViewModelBase
     B -->|否| D[处理B]
     C --> E[结束]
     D --> E";
+            CurrentTab.IsModified = false;
+            CurrentTab.UpdateHeader();
         }
     }
 
