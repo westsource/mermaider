@@ -1,0 +1,137 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Mermaider.ViewModels"
+             xmlns:models="using:Mermaider.Models"
+             xmlns:views="using:Mermaider.Views"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="250"
+             x:Class="Mermaider.Views.AIPanel"
+             x:DataType="vm:AIPanelViewModel">
+
+    <Design.DataContext>
+        <vm:AIPanelViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*">
+        <Border Grid.Row="0" Background="#F5F5F5" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="8,4">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                <TextBlock Grid.Column="0" Text="{Binding ToggleButtonText}" 
+                           VerticalAlignment="Center" FontWeight="SemiBold" FontSize="12"
+                           Foreground="#333333" Cursor="Hand"
+                           PointerPressed="OnTogglePointerPressed"/>
+                
+                <TextBlock Grid.Column="1" Text="{Binding StatusMessage}"
+                           VerticalAlignment="Center" HorizontalAlignment="Right"
+                           FontSize="11" Foreground="#888888" Margin="10,0,0,0"
+                           TextTrimming="CharacterEllipsis"/>
+
+                <Button Grid.Column="2" Content="⚙" 
+                        Width="24" Height="24" Padding="0" Margin="8,0,0,0"
+                        FontSize="14" Background="Transparent" BorderThickness="0"
+                        ToolTip.Tip="AI 设置"
+                        Command="{Binding OpenSettingsCommand}"/>
+
+                <Button Grid.Column="3" Content="🗑" 
+                        Width="24" Height="24" Padding="0" Margin="4,0,0,0"
+                        FontSize="12" Background="Transparent" BorderThickness="0"
+                        ToolTip.Tip="清空对话历史"
+                        Command="{Binding ClearHistoryCommand}"
+                        IsEnabled="{Binding HasMessages}"/>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" RowDefinitions="*,Auto">
+            <ScrollViewer Grid.Row="0" Background="#FAFAFA" Padding="8,4"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding Messages}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:AIMessage">
+                            <Border Background="{Binding Role, Converter={x:Static views:AIPanelConverters.MessageBackgroundConverter}}"
+                                    CornerRadius="8" Padding="10,6" Margin="0,4"
+                                    HorizontalAlignment="{Binding Role, Converter={x:Static views:AIPanelConverters.MessageAlignmentConverter}}">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="{Binding Content}" 
+                                               TextWrapping="Wrap" FontSize="12"
+                                               Foreground="#333333"
+                                               MaxWidth="450"
+                                               IsVisible="{Binding Content, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                    
+                                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                                IsVisible="{Binding GeneratedCode, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                        <TextBlock Text="✓ 代码已生成" FontSize="11" Foreground="#059669"/>
+                                        <Button Content="应用" FontSize="10" Padding="6,2"
+                                                Background="#E0F2F1" BorderThickness="0"
+                                                CornerRadius="4" Cursor="Hand"
+                                                Command="{Binding $parent[ItemsControl].((vm:AIPanelViewModel)DataContext).ApplyCodeCommand}"
+                                                CommandParameter="{Binding}"/>
+                                        <Button Content="回退" FontSize="10" Padding="6,2"
+                                                Background="#FFF3E0" BorderThickness="0"
+                                                CornerRadius="4" Cursor="Hand"
+                                                IsVisible="{Binding CodeBeforeGeneration, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                                Command="{Binding $parent[ItemsControl].((vm:AIPanelViewModel)DataContext).RevertCodeCommand}"
+                                                CommandParameter="{Binding}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" Spacing="4"
+                                                IsVisible="{Binding IsLoading}">
+                                        <TextBlock Text="●" FontSize="10" Foreground="#888888" Opacity="0.3"/>
+                                        <TextBlock Text="●" FontSize="10" Foreground="#888888" Opacity="0.6"/>
+                                        <TextBlock Text="●" FontSize="10" Foreground="#888888" Opacity="1.0"/>
+                                    </StackPanel>
+
+                                    <TextBlock Text="{Binding ErrorMessage}" 
+                                               TextWrapping="Wrap" FontSize="11"
+                                               Foreground="#DC2626"
+                                               IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="8,6">
+                <Grid ColumnDefinitions="*,Auto,Auto">
+                    <TextBox Grid.Column="0" 
+                             Text="{Binding InputText}"
+                             Watermark="描述你想要的图表..."
+                             AcceptsReturn="False"
+                             FontSize="12"
+                             Padding="8,6"
+                             CornerRadius="6"
+                             BorderBrush="#D0D0D0"
+                             KeyDown="OnInputKeyDown"/>
+                    
+                    <ComboBox Grid.Column="1"
+                              Width="120" Height="28" Margin="8,0,0,0"
+                              Padding="8,0"
+                              FontSize="11"
+                              ItemsSource="{Binding AvailableModels}"
+                              SelectedItem="{Binding SelectedModel}"
+                              IsEnabled="{Binding !IsLoading}"
+                              ToolTip.Tip="选择 AI 模型">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:AIModelConfig">
+                                <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    
+                    <Button Grid.Column="2" Content="发送"
+                            Width="60" Height="28" Margin="8,0,0,0"
+                            FontSize="12"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            CornerRadius="6"
+                            Background="#3B82F6" Foreground="White"
+                            BorderThickness="0"
+                            Cursor="Hand"
+                            Command="{Binding SendCommand}"
+                            IsEnabled="{Binding !IsLoading}"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

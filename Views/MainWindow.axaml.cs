@@ -14,6 +14,7 @@ using AvaloniaEdit;
 using AvaloniaWebView;
 using Mermaider.Models;
 using Mermaider.ViewModels;
+using Mermaider.Views;
 
 namespace Mermaider.Views;
 
@@ -41,9 +42,16 @@ public partial class MainWindow : Window
     private double _splitterStartX;
     private double _editorStartWidth;
 
+    private bool _isDraggingAIPanelSplitter;
+    private bool _aiPanelSplitterDragStarted;
+    private double _aiPanelSplitterStartY;
+    private double _aiPanelStartHeight;
+
     private const double MinEditorWidth = 320;
     private const double MaxEditorWidth = 860;
     private const double MinPreviewWidth = 480;
+    private const double MinAIPanelHeight = 50;
+    private const double MaxAIPanelHeight = 600;
 
     public MainWindow()
     {
@@ -222,6 +230,61 @@ public partial class MainWindow : Window
         {
             _viewModel.ToggleEditorVisibilityCommand.Execute(null);
             e.Handled = true;
+        }
+    }
+
+    private void OnAIPanelTogglePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_viewModel?.AiAssistant != null)
+        {
+            _viewModel.AiAssistant.ToggleCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    private void OnAIPanelSplitterPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            _isDraggingAIPanelSplitter = true;
+            _aiPanelSplitterDragStarted = false;
+            _aiPanelSplitterStartY = e.GetPosition(this).Y;
+            _aiPanelStartHeight = _viewModel?.AiAssistant?.PanelHeight ?? 200;
+        }
+    }
+
+    private void OnAIPanelSplitterPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!_isDraggingAIPanelSplitter || _viewModel?.AiAssistant == null)
+            return;
+
+        var currentY = e.GetPosition(this).Y;
+        var deltaY = _aiPanelSplitterStartY - currentY;
+
+        if (!_aiPanelSplitterDragStarted)
+        {
+            if (Math.Abs(deltaY) < 3)
+                return;
+            _aiPanelSplitterDragStarted = true;
+            e.Pointer.Capture(sender as Control);
+        }
+
+        var newHeight = _aiPanelStartHeight + deltaY;
+        newHeight = Math.Clamp(newHeight, MinAIPanelHeight, MaxAIPanelHeight);
+        _viewModel.AiAssistant.PanelHeight = newHeight;
+        e.Handled = true;
+    }
+
+    private void OnAIPanelSplitterPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_isDraggingAIPanelSplitter)
+        {
+            var wasDragStarted = _aiPanelSplitterDragStarted;
+            _isDraggingAIPanelSplitter = false;
+            _aiPanelSplitterDragStarted = false;
+            e.Pointer.Capture(null);
+            if (wasDragStarted)
+                e.Handled = true;
         }
     }
 

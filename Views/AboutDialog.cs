@@ -77,7 +77,9 @@ public sealed class AboutDialog : Window
         {
             Content = text,
             MinWidth = 88,
-            IsDefault = true
+            IsDefault = true,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Center
         };
         button.Click += onClick;
         return button;

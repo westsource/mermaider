@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Mermaider.ViewModels"
         xmlns:models="using:Mermaider.Models"
+        xmlns:views="using:Mermaider.Views"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:avaloniaEdit="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
@@ -69,6 +70,8 @@
                 <MenuItem Header="全选(_A)" InputGesture="Ctrl+A" Command="{Binding SelectAllCommand}" IsEnabled="{Binding CanSelectAllAction}"/>
             </MenuItem>
             <MenuItem Header="帮助(_H)">
+                <MenuItem Header="AI 设置(_I)..." Command="{Binding OpenAISettingsCommand}"/>
+                <Separator/>
                 <MenuItem Header="关于(_A)..." Command="{Binding AboutCommand}"/>
             </MenuItem>
         </Menu>
@@ -129,17 +132,49 @@
                 <Grid x:Name="WorkspaceGrid" ColumnDefinitions="Auto,Auto,*" SizeChanged="OnWorkspaceSizeChanged" ClipToBounds="False">
                     <Border Grid.Column="0" Background="#FFFFFF" Width="{Binding EditorPanelWidth}" MinWidth="0"
                             IsVisible="{Binding IsEditorVisible}">
-                        <avaloniaEdit:TextEditor x:Name="CodeEditor"
-                                                 Document="{Binding #root.DataContext.CurrentTab.Document}"
-                                                 SyntaxHighlighting="{Binding MermaidHighlighting}"
-                                                 FontFamily="JetBrains Mono,Cascadia Code,Fira Code,Consolas,Menlo,Monaco,monospace"
-                                                 FontSize="14"
-                                                 Background="#FFFFFF"
-                                                 Foreground="#333333"
-                                                 BorderThickness="0"
-                                                 ShowLineNumbers="True"
-                                                 HorizontalScrollBarVisibility="Auto"
-                                                 VerticalScrollBarVisibility="Auto"/>
+                        <Grid RowDefinitions="*,Auto,Auto">
+                            <avaloniaEdit:TextEditor Grid.Row="0" x:Name="CodeEditor"
+                                                     Document="{Binding #root.DataContext.CurrentTab.Document}"
+                                                     SyntaxHighlighting="{Binding MermaidHighlighting}"
+                                                     FontFamily="JetBrains Mono,Cascadia Code,Fira Code,Consolas,Menlo,Monaco,monospace"
+                                                     FontSize="14"
+                                                     Background="#FFFFFF"
+                                                     Foreground="#333333"
+                                                     BorderThickness="0"
+                                                     ShowLineNumbers="True"
+                                                     HorizontalScrollBarVisibility="Auto"
+                                                     VerticalScrollBarVisibility="Auto"/>
+
+                            <Border Grid.Row="1" Background="#E8E8E8" Height="4"
+                                    IsVisible="{Binding AiAssistant.IsExpanded}"
+                                    Cursor="SizeNorthSouth"
+                                    PointerPressed="OnAIPanelSplitterPointerPressed"
+                                    PointerMoved="OnAIPanelSplitterPointerMoved"
+                                    PointerReleased="OnAIPanelSplitterPointerReleased">
+                                <Border Width="30" Height="3" Background="#C0C0C0" CornerRadius="1.5"
+                                        VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                            </Border>
+
+                            <Border Grid.Row="2" Background="#F8F8F8" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0"
+                                    MinHeight="0" MaxHeight="300"
+                                    Height="{Binding AiAssistant.PanelHeight}"
+                                    IsVisible="{Binding AiAssistant.IsExpanded}">
+                                <views:AIPanel DataContext="{Binding AiAssistant}"/>
+                            </Border>
+
+                            <Border Grid.Row="2" Background="#F5F5F5" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0"
+                                    Height="28" Padding="8,4"
+                                    IsVisible="{Binding !AiAssistant.IsExpanded}"
+                                    Cursor="Hand"
+                                    PointerPressed="OnAIPanelTogglePointerPressed">
+                                <Grid ColumnDefinitions="Auto,*">
+                                    <TextBlock Grid.Column="0" Text="{Binding AiAssistant.ToggleButtonText}"
+                                               FontWeight="SemiBold" FontSize="12" Foreground="#333333"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding AiAssistant.StatusMessage}"
+                                               HorizontalAlignment="Right" FontSize="11" Foreground="#888888"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
                     </Border>
 
                     <Border x:Name="SplitterBorder"

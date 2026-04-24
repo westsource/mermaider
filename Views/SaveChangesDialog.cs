@@ -20,7 +20,7 @@ public sealed class SaveChangesDialog : Window
     {
         Title = "保存更改";
         Width = 420;
-        Height = 170;
+        Height = 160;
         CanResize = false;
         ShowInTaskbar = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -36,17 +36,19 @@ public sealed class SaveChangesDialog : Window
         var dontSaveButton = CreateButton("不保存", false, (_, _) => Close(SaveChangesDialogResult.DontSave));
         var cancelButton = CreateButton("取消", false, (_, _) => Close(SaveChangesDialogResult.Cancel));
 
-        Content = new StackPanel
+        Content = new Grid
         {
-            Margin = new Thickness(20),
-            Spacing = 18,
+            RowDefinitions = RowDefinitions.Parse("*,Auto"),
+            Margin = new Thickness(20, 20, 20, 16),
             Children =
             {
                 message,
                 new StackPanel
                 {
+                    [Grid.RowProperty] = 1,
                     Orientation = Orientation.Horizontal,
                     HorizontalAlignment = HorizontalAlignment.Right,
+                    Margin = new Thickness(0, 16, 0, 0),
                     Spacing = 8,
                     Children =
                     {
@@ -65,7 +67,9 @@ public sealed class SaveChangesDialog : Window
         {
             Content = text,
             MinWidth = 88,
-            IsDefault = isDefault
+            IsDefault = isDefault,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Center
         };
         button.Click += onClick;
         return button;

@@ -31,6 +31,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly SettingsService _settingsService;
     private readonly IStorageProvider _storageProvider;
     private readonly Window _ownerWindow;
+    private readonly AIConversationService _conversationService;
     private Timer? _debounceTimer;
     private readonly object _timerLock = new();
     private readonly object _renderLock = new();
@@ -102,6 +103,9 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private ObservableCollection<RecentFileItem> _recentFiles = new();
 
+    [ObservableProperty]
+    private AIPanelViewModel? _aiAssistant;
+
     public bool HasRecentFiles => RecentFiles.Count > 0;
 
     public string ZoomText => $"缩放: {(int)(PreviewDisplayScale * 100)}%";
@@ -137,6 +141,8 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(ZoomText));
         OnPropertyChanged(nameof(CurrentTab));
 
+        AiAssistant?.SetCurrentFile(CurrentTab?.FilePath);
+
         if (CurrentTab != null)
         {
             if (!string.IsNullOrWhiteSpace(CurrentTab.WebPreviewHtml))
@@ -165,6 +171,8 @@ public partial class MainViewModel : ViewModelBase
         _ownerWindow = ownerWindow;
         _fileService.SetStorageProvider(storageProvider);
 
+        _conversationService = new AIConversationService(settingsService.Settings.ConversationStoragePath);
+
         EditorPreviewRatio = settingsService.Settings.EditorPreviewRatio;
         PreviewZoom = settingsService.Settings.PreviewZoom;
         RecentFiles.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasRecentFiles));
@@ -176,13 +184,48 @@ public partial class MainViewModel : ViewModelBase
         }
         OnPropertyChanged(nameof(HasRecentFiles));
 
+        InitializeAIPanelViewModel();
+
         AddNewTab();
+    }
+
+    private void InitializeAIPanelViewModel()
+    {
+        AiAssistant = new AIPanelViewModel(_settingsService, _conversationService);
+        AiAssistant.GetCurrentCode = () => CurrentTab?.Content;
+        AiAssistant.CodeGenerated += OnAICodeGenerated;
+        AiAssistant.OpenSettingsRequested += OnOpenAISettingsRequested;
+    }
+
+    private void OnAICodeGenerated(object? sender, string code)
+    {
+        if (CurrentTab != null)
+        {
+            CurrentTab.Content = code;
+            StatusMessage = "AI 生成的代码已应用";
+        }
+    }
+
+    private void OnOpenAISettingsRequested(object? sender, EventArgs e)
+    {
+        OpenAISettings();
+    }
+
+    [RelayCommand]
+    private void OpenAISettings()
+    {
+        var dialog = new AISettingsDialog(new AISettingsViewModel(_settingsService, _storageProvider, () =>
+        {
+            AiAssistant?.RefreshConfiguration();
+        }));
+        _ = dialog.ShowDialog(_ownerWindow);
     }
 
     public void SaveSettings()
     {
         _settingsService.Settings.EditorPreviewRatio = EditorPreviewRatio;
         _settingsService.Settings.PreviewZoom = PreviewZoom;
+        AiAssistant?.SaveSettings();
         _settingsService.Save();
     }
 
