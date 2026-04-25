@@ -56,6 +56,7 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        CleanupStalePreviewFiles();
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
         AttachPreviewHandlers();
@@ -673,11 +674,6 @@ public partial class MainWindow : Window
             throw new InvalidOperationException("预览文件初始化失败。");
         }
 
-        foreach (var oldFile in Directory.GetFiles(_previewTempDir, "preview_*.html"))
-        {
-            try { File.Delete(oldFile); } catch { }
-        }
-
         var htmlPath = Path.Combine(_previewTempDir, $"preview_{DateTime.Now.Ticks}.html");
         File.WriteAllText(htmlPath, _pendingPreviewHtml, Encoding.UTF8);
         var previewUri = new Uri(htmlPath);
@@ -730,6 +726,25 @@ public partial class MainWindow : Window
         }
 
         throw new InvalidOperationException("当前 WebView 版本不支持可用导航方式（Navigate/Source/Url）。");
+    }
+
+    private void CleanupStalePreviewFiles()
+    {
+        var dir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Mermaider",
+            "webpreview");
+        if (!Directory.Exists(dir)) return;
+        var cutoff = DateTime.Now.AddDays(-7);
+        foreach (var oldFile in Directory.GetFiles(dir, "preview_*.html"))
+        {
+            try
+            {
+                if (File.GetCreationTime(oldFile) < cutoff)
+                    File.Delete(oldFile);
+            }
+            catch { }
+        }
     }
 
     private void EnsurePreviewFilesReady()
