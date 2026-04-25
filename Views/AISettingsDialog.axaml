@@ -17,7 +17,7 @@
     </Design.DataContext>
 
     <Grid RowDefinitions="*,Auto" Margin="16">
-        <ScrollViewer Grid.Row="0">
+        <ScrollViewer Grid.Row="0" Padding="0,0,5,0">
             <StackPanel Spacing="16">
                 <TextBlock Text="AI 模型配置" FontSize="16" FontWeight="Bold" Foreground="#333333"/>
 

@@ -156,7 +156,7 @@
                             </Border>
 
                             <Border Grid.Row="2" Background="#F8F8F8" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0"
-                                    MinHeight="0" MaxHeight="300"
+                                    MinHeight="50"
                                     Height="{Binding AiAssistant.PanelHeight}"
                                     IsVisible="{Binding AiAssistant.IsExpanded}">
                                 <views:AIPanel DataContext="{Binding AiAssistant}"/>

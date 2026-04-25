@@ -51,7 +51,6 @@ public partial class MainWindow : Window
     private const double MaxEditorWidth = 860;
     private const double MinPreviewWidth = 480;
     private const double MinAIPanelHeight = 50;
-    private const double MaxAIPanelHeight = 600;
 
     public MainWindow()
     {
@@ -269,8 +268,9 @@ public partial class MainWindow : Window
             e.Pointer.Capture(sender as Control);
         }
 
+        var maxAIPanelHeight = Bounds.Height * 0.7;
         var newHeight = _aiPanelStartHeight + deltaY;
-        newHeight = Math.Clamp(newHeight, MinAIPanelHeight, MaxAIPanelHeight);
+        newHeight = Math.Clamp(newHeight, MinAIPanelHeight, maxAIPanelHeight);
         _viewModel.AiAssistant.PanelHeight = newHeight;
         e.Handled = true;
     }
