@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
@@ -11,6 +12,15 @@ namespace Mermaider.Views;
 
 public partial class AIPanel : UserControl
 {
+    private bool _isDraggingChatSplitter;
+    private bool _chatSplitterDragStarted;
+    private double _chatSplitterStartY;
+    private double _chatInputStartHeight;
+
+    private const double ChatInputDefaultHeight = 100;
+    private const double ChatInputMinHeight = 80;
+    private const double ChatInputMaxHeight = 320;
+
     public AIPanel()
     {
         InitializeComponent();
@@ -20,6 +30,12 @@ public partial class AIPanel : UserControl
     private void OnLoaded(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         SetupInputTextBoxContextMenu();
+
+        var inputArea = this.FindControl<Border>("ChatInputArea");
+        if (inputArea != null)
+        {
+            inputArea.Height = ChatInputDefaultHeight;
+        }
     }
 
     private void SetupInputTextBoxContextMenu()
@@ -71,6 +87,55 @@ public partial class AIPanel : UserControl
             {
                 vm.SendCommand.Execute(null);
             }
+        }
+    }
+
+    private void OnChatSplitterPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            _isDraggingChatSplitter = true;
+            _chatSplitterDragStarted = false;
+            _chatSplitterStartY = e.GetPosition(this).Y;
+            var inputArea = this.FindControl<Border>("ChatInputArea");
+            _chatInputStartHeight = inputArea?.Bounds.Height ?? ChatInputDefaultHeight;
+            e.Handled = true;
+        }
+    }
+
+    private void OnChatSplitterPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!_isDraggingChatSplitter) return;
+
+        var currentY = e.GetPosition(this).Y;
+        var deltaY = _chatSplitterStartY - currentY;
+
+        if (!_chatSplitterDragStarted)
+        {
+            if (Math.Abs(deltaY) < 3) return;
+            _chatSplitterDragStarted = true;
+            if (sender is Control c) e.Pointer.Capture(c);
+        }
+
+        var newHeight = Math.Clamp(_chatInputStartHeight + deltaY, ChatInputMinHeight, ChatInputMaxHeight);
+        var inputArea = this.FindControl<Border>("ChatInputArea");
+        if (inputArea != null)
+        {
+            inputArea.Height = newHeight;
+        }
+
+        e.Handled = true;
+    }
+
+    private void OnChatSplitterPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_isDraggingChatSplitter)
+        {
+            var wasDragStarted = _chatSplitterDragStarted;
+            _isDraggingChatSplitter = false;
+            _chatSplitterDragStarted = false;
+            e.Pointer.Capture(null);
+            if (wasDragStarted) e.Handled = true;
         }
     }
 }

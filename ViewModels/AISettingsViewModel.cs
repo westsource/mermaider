@@ -157,13 +157,15 @@ public partial class AISettingsViewModel : ViewModelBase
     [RelayCommand]
     private void SaveModel()
     {
+        var cleanBaseUrl = CleanBaseUrl(EditingBaseUrl, EditingProvider);
+
         var config = new AIModelConfig
         {
             Id = EditingModelIdOriginal ?? Guid.NewGuid().ToString(),
             Name = string.IsNullOrWhiteSpace(EditingName) ? EditingModelId : EditingName,
             Provider = EditingProvider,
             ApiKey = EditingApiKey,
-            BaseUrl = EditingBaseUrl,
+            BaseUrl = cleanBaseUrl,
             Endpoint = EditingEndpoint,
             DeploymentName = EditingDeploymentName,
             ModelId = EditingModelId,
@@ -238,6 +240,36 @@ public partial class AISettingsViewModel : ViewModelBase
                 dialog.Close(true);
             }
         }
+    }
+
+    private static string CleanBaseUrl(string? url, AIProvider provider)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return string.Empty;
+
+        var trimmed = url.Trim().TrimEnd('/');
+
+        if (provider is AIProvider.Custom or AIProvider.OpenAI)
+        {
+            var suffixes = new[] { "/chat/completions", "/v1/chat/completions" };
+            foreach (var suffix in suffixes)
+            {
+                if (trimmed.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                {
+                    trimmed = trimmed[..^suffix.Length];
+                    break;
+                }
+            }
+        }
+        else if (provider == AIProvider.Ollama)
+        {
+            if (trimmed.EndsWith("/api/chat", StringComparison.OrdinalIgnoreCase))
+            {
+                trimmed = trimmed[..^"/api/chat".Length];
+            }
+        }
+
+        return trimmed;
     }
 
     public static readonly IValueConverter ProviderDisplayNameConverter = new FuncValueConverter<AIProvider, string>(

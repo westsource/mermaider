@@ -43,7 +43,7 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="1" RowDefinitions="*,Auto">
+        <Grid Grid.Row="1" RowDefinitions="*,4,Auto">
             <ScrollViewer Grid.Row="0" Background="#FAFAFA" Padding="8,4"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
@@ -54,7 +54,7 @@
                                     CornerRadius="8" Padding="10,6" Margin="0,4"
                                     HorizontalAlignment="{Binding Role, Converter={x:Static views:AIPanelConverters.MessageAlignmentConverter}}">
                                 <StackPanel Spacing="6">
-                                    <TextBlock Text="{Binding Content}" 
+                                    <SelectableTextBlock Text="{Binding Content}" 
                                                TextWrapping="Wrap" FontSize="12"
                                                Foreground="#333333"
                                                MaxWidth="450"
@@ -83,7 +83,7 @@
                                         <TextBlock Text="●" FontSize="10" Foreground="#888888" Opacity="1.0"/>
                                     </StackPanel>
 
-                                    <TextBlock Text="{Binding ErrorMessage}" 
+                                    <SelectableTextBlock Text="{Binding ErrorMessage}" 
                                                TextWrapping="Wrap" FontSize="11"
                                                Foreground="#DC2626"
                                                IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
@@ -94,45 +94,57 @@
                 </ItemsControl>
             </ScrollViewer>
 
-            <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="8,6">
-                <Grid ColumnDefinitions="*,Auto,Auto">
-                    <TextBox Grid.Column="0" 
+            <Border Grid.Row="1" Background="#E8E8E8" Cursor="SizeNorthSouth"
+                    PointerPressed="OnChatSplitterPointerPressed"
+                    PointerMoved="OnChatSplitterPointerMoved"
+                    PointerReleased="OnChatSplitterPointerReleased">
+                <Border Width="30" Height="3" Background="#C0C0C0" CornerRadius="1.5"
+                        VerticalAlignment="Center" HorizontalAlignment="Center"/>
+            </Border>
+
+            <Border Grid.Row="2" x:Name="ChatInputArea" Background="#FFFFFF" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="8,6">
+                <Grid RowDefinitions="*,Auto">
+                    <TextBox Grid.Row="0" 
                               x:Name="InputTextBox"
                               Text="{Binding InputText}"
-                              Watermark="描述你想要的图表..."
-                              AcceptsReturn="False"
+                              Watermark="描述你想要的图表... (Shift+Enter换行)"
+                              AcceptsReturn="True"
+                              TextWrapping="Wrap"
                               FontSize="12"
                               Padding="8,6"
+                              MinHeight="48"
                               CornerRadius="6"
                               BorderBrush="#D0D0D0"
                               KeyDown="OnInputKeyDown"/>
                     
-                    <ComboBox Grid.Column="1"
-                              Width="120" Height="28" Margin="8,0,0,0"
-                              Padding="8,0"
-                              FontSize="11"
-                              ItemsSource="{Binding AvailableModels}"
-                              SelectedItem="{Binding SelectedModel}"
-                              IsEnabled="{Binding !IsLoading}"
-                              ToolTip.Tip="选择 AI 模型">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="models:AIModelConfig">
-                                <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis"/>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                    
-                    <Button Grid.Column="2" Content="发送"
-                            Width="60" Height="28" Margin="8,0,0,0"
-                            FontSize="12"
-                            HorizontalContentAlignment="Center"
-                            VerticalContentAlignment="Center"
-                            CornerRadius="6"
-                            Background="#3B82F6" Foreground="White"
-                            BorderThickness="0"
-                            Cursor="Hand"
-                            Command="{Binding SendCommand}"
-                            IsEnabled="{Binding !IsLoading}"/>
+                    <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" Margin="0,6,0,0">
+                        <ComboBox Grid.Column="1"
+                                  Width="120" Height="28"
+                                  Padding="8,0"
+                                  FontSize="11"
+                                  ItemsSource="{Binding AvailableModels}"
+                                  SelectedItem="{Binding SelectedModel}"
+                                  IsEnabled="{Binding !IsLoading}"
+                                  ToolTip.Tip="选择 AI 模型">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="models:AIModelConfig">
+                                    <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        
+                        <Button Grid.Column="2" Content="发送"
+                                Width="60" Height="28" Margin="8,0,0,0"
+                                FontSize="12"
+                                HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center"
+                                CornerRadius="6"
+                                Background="#3B82F6" Foreground="White"
+                                BorderThickness="0"
+                                Cursor="Hand"
+                                Command="{Binding SendCommand}"
+                                IsEnabled="{Binding !IsLoading}"/>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>
