@@ -76,6 +76,21 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _currentPreviewHtml = BuildPreviewHtml(string.Empty);
 
+    public string AppVersion { get; } = GetDisplayVersion();
+
+    private static string GetDisplayVersion()
+    {
+        var attr = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        if (attr != null && !string.IsNullOrWhiteSpace(attr.InformationalVersion))
+        {
+            var v = attr.InformationalVersion.Split('+')[0].Trim();
+            if (!string.IsNullOrEmpty(v)) return v;
+        }
+        return "1.0.0.0";
+    }
+
+    public string WindowTitle => $"Mermaider v{AppVersion} - Mermaid 图表编辑器";
+
     private const double MinZoom = 1.0;
     private const double MaxZoom = 5.0;
     private const double ZoomStep = 0.1;
@@ -904,12 +919,11 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void About()
     {
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
         var dialog = new AboutDialog(
             "Mermaider",
             "本地 Mermaid 图表编辑器，支持代码编辑、语法高亮、实时预览、语法检测和图片导出。",
             "黄超（道荣）",
-            version
+            AppVersion
         );
 
         _ = dialog.ShowDialog(_ownerWindow);

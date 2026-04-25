@@ -1,7 +1,8 @@
 param(
     [string]$Runtime = "win-x64",
     [switch]$Run,
-    [switch]$English
+    [switch]$English,
+    [string]$Version
 )
 
 $null = chcp 65001
@@ -10,7 +11,10 @@ $null = chcp 65001
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
 $ProjectPath = $PSScriptRoot
-$OutputPath = Join-Path $ProjectPath "bin\Release\net10.0\$Runtime\publish"
+$CsprojPath = Join-Path $ProjectPath "Mermaider.csproj"
+$PublishPath = Join-Path $ProjectPath "bin\Release\net10.0\$Runtime\publish"
+$DistPath = Join-Path $ProjectPath "dist"
+$BuildCountFile = Join-Path $ProjectPath ".build-count"
 
 if ($English) {
     Write-Host "Building Mermaider..." -ForegroundColor Cyan
@@ -20,43 +24,158 @@ if ($English) {
     Write-Host "目标平台: $Runtime" -ForegroundColor Gray
 }
 
+$CsprojContent = Get-Content $CsprojPath -Raw
+
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    if ($CsprojContent -match '<Version>(\d+)\.(\d+)') {
+        $Major = $matches[1]
+        $Minor = $matches[2]
+    } else {
+        $Major = "1"
+        $Minor = "0"
+    }
+    
+    $DateRevision = Get-Date -Format "yyMMdd"
+    
+    $BuildCount = 0
+    $TodayStr = Get-Date -Format "yyyy-MM-dd"
+    if (Test-Path $BuildCountFile) {
+        $CountContent = Get-Content $BuildCountFile -ErrorAction SilentlyContinue
+        if ($CountContent -match '^(\d{4}-\d{2}-\d{2})\|(\d+)$') {
+            if ($matches[1] -eq $TodayStr) {
+                $BuildCount = [int]$matches[2] + 1
+            } else {
+                $BuildCount = 0
+            }
+        }
+    }
+    Set-Content -Path $BuildCountFile -Value "$TodayStr|$BuildCount" -NoNewline
+    
+    $Version = "$Major.$Minor.$DateRevision.$BuildCount"
+}
+
+if ($English) {
+    Write-Host "Version: $Version" -ForegroundColor Gray
+} else {
+    Write-Host "版本号: $Version" -ForegroundColor Gray
+}
+
+$VersionParts = $Version.Split('.')
+$Major = $VersionParts[0]
+$Minor = if ($VersionParts.Length -gt 1) { $VersionParts[1] } else { "0" }
+$Revision = if ($VersionParts.Length -gt 2) { $VersionParts[2] } else { "0" }
+$BuildNum = if ($VersionParts.Length -gt 3) { $VersionParts[3] } else { "0" }
+$AssemblyVersion = "$Major.$Minor.0.0"
+
+$DateCode = Get-Date -Format "yyMMdd"
+$BuildPart = [math]::Min([int]$DateCode.Substring(0, 3), 65534)
+$RevisionPart = [math]::Min([int]$DateCode.Substring(3, 3), 65534)
+$FileVersion = "$Major.$Minor.$BuildPart.$RevisionPart"
+
+$CsprojContent = $CsprojContent -replace '<Version>.*?</Version>', "<Version>$Version</Version>"
+$CsprojContent = $CsprojContent -replace '<AssemblyVersion>.*?</AssemblyVersion>', "<AssemblyVersion>$AssemblyVersion</AssemblyVersion>"
+$CsprojContent = $CsprojContent -replace '<FileVersion>.*?</FileVersion>', "<FileVersion>$FileVersion</FileVersion>"
+
+Set-Content -Path $CsprojPath -Value $CsprojContent -NoNewline
+
 dotnet publish $ProjectPath `
     -c Release `
     -r $Runtime `
-    --self-contained true `
-    -p:PublishSingleFile=true `
-    -p:IncludeNativeLibrariesForSelfExtract=true `
-    -p:EnableCompressionInSingleFile=true
+    --self-contained true
 
-if ($LASTEXITCODE -eq 0) {
-    $ExePath = Join-Path $OutputPath "Mermaider.exe"
-    $FileInfo = Get-Item $ExePath
-    $SizeMB = [math]::Round($FileInfo.Length / 1MB, 2)
-    
-    if ($English) {
-        Write-Host "`nBuild succeeded!" -ForegroundColor Green
-        Write-Host "Output path: $ExePath" -ForegroundColor Yellow
-        Write-Host "File size: $SizeMB MB" -ForegroundColor Yellow
-        
-        if ($Run) {
-            Write-Host "`nLaunching application..." -ForegroundColor Cyan
-            Start-Process $ExePath
-        }
-    } else {
-        Write-Host "`n打包成功!" -ForegroundColor Green
-        Write-Host "输出路径: $ExePath" -ForegroundColor Yellow
-        Write-Host "文件大小: $SizeMB MB" -ForegroundColor Yellow
-        
-        if ($Run) {
-            Write-Host "`n启动程序..." -ForegroundColor Cyan
-            Start-Process $ExePath
-        }
-    }
-} else {
+if ($LASTEXITCODE -ne 0) {
     if ($English) {
         Write-Host "`nBuild failed!" -ForegroundColor Red
     } else {
         Write-Host "`n打包失败!" -ForegroundColor Red
+    }
+    exit 1
+}
+
+$ToolsSourcePath = Join-Path $ProjectPath "tools"
+$ToolsDestPath = Join-Path $PublishPath "tools"
+
+if (Test-Path $ToolsSourcePath) {
+    if (-not (Test-Path $ToolsDestPath)) {
+        New-Item -ItemType Directory -Path $ToolsDestPath -Force | Out-Null
+    }
+    Copy-Item -Path "$ToolsSourcePath\*" -Destination $ToolsDestPath -Recurse -Force
+    if ($English) {
+        Write-Host "Tools copied to publish directory." -ForegroundColor Gray
+    } else {
+        Write-Host "工具已复制到发布目录。" -ForegroundColor Gray
+    }
+}
+
+if (Test-Path $DistPath) {
+    Remove-Item -Path $DistPath -Recurse -Force
+}
+New-Item -ItemType Directory -Path $DistPath -Force | Out-Null
+
+$ZipFileName = "Mermaider-$Version-$Runtime.zip"
+$ZipFilePath = Join-Path $DistPath $ZipFileName
+
+if ($English) {
+    Write-Host "Creating ZIP archive..." -ForegroundColor Cyan
+} else {
+    Write-Host "正在创建 ZIP 压缩包..." -ForegroundColor Cyan
+}
+
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$ZipArchive = [System.IO.Compression.ZipFile]::Open($ZipFilePath, 'Create')
+$CompressionLevel = [System.IO.Compression.CompressionLevel]::Fastest
+
+Get-ChildItem -Path $PublishPath -Recurse -File | ForEach-Object {
+    $relativePath = $_.FullName.Substring($PublishPath.Length + 1)
+    $entry = $ZipArchive.CreateEntry($relativePath, $CompressionLevel)
+    $entryStream = $entry.Open()
+    $fileStream = $_.OpenRead()
+    try {
+        $fileStream.CopyTo($entryStream)
+    }
+    finally {
+        $fileStream.Dispose()
+        $entryStream.Dispose()
+    }
+}
+
+$ZipArchive.Dispose()
+
+if (Test-Path $ZipFilePath) {
+    $ZipInfo = Get-Item $ZipFilePath
+    $SizeMB = [math]::Round($ZipInfo.Length / 1MB, 2)
+    
+    $PublishSize = (Get-ChildItem -Path $PublishPath -Recurse -File | Measure-Object -Property Length -Sum).Sum
+    $PublishSizeMB = [math]::Round($PublishSize / 1MB, 2)
+    
+    if ($English) {
+        Write-Host "`nBuild succeeded!" -ForegroundColor Green
+        Write-Host "Version: $Version" -ForegroundColor Yellow
+        Write-Host "ZIP path: $ZipFilePath" -ForegroundColor Yellow
+        Write-Host "ZIP size: $SizeMB MB" -ForegroundColor Yellow
+        Write-Host "Extracted size: $PublishSizeMB MB" -ForegroundColor Gray
+        
+        if ($Run) {
+            Write-Host "`nLaunching application..." -ForegroundColor Cyan
+            Start-Process (Join-Path $PublishPath "Mermaider.exe")
+        }
+    } else {
+        Write-Host "`n打包成功!" -ForegroundColor Green
+        Write-Host "版本号: $Version" -ForegroundColor Yellow
+        Write-Host "ZIP路径: $ZipFilePath" -ForegroundColor Yellow
+        Write-Host "ZIP大小: $SizeMB MB" -ForegroundColor Yellow
+        Write-Host "解压后大小: $PublishSizeMB MB" -ForegroundColor Gray
+        
+        if ($Run) {
+            Write-Host "`n启动程序..." -ForegroundColor Cyan
+            Start-Process (Join-Path $PublishPath "Mermaider.exe")
+        }
+    }
+} else {
+    if ($English) {
+        Write-Host "`nFailed to create ZIP archive!" -ForegroundColor Red
+    } else {
+        Write-Host "`n创建 ZIP 压缩包失败!" -ForegroundColor Red
     }
     exit 1
 }

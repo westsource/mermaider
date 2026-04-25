@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
@@ -13,6 +14,44 @@ public partial class AIPanel : UserControl
     public AIPanel()
     {
         InitializeComponent();
+        Loaded += OnLoaded;
+    }
+
+    private void OnLoaded(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        SetupInputTextBoxContextMenu();
+    }
+
+    private void SetupInputTextBoxContextMenu()
+    {
+        var inputTextBox = this.FindControl<TextBox>("InputTextBox");
+        if (inputTextBox == null) return;
+
+        var menu = new ContextMenu();
+        
+        var cutItem = new MenuItem { Header = "剪切(_X)", HotKey = KeyGesture.Parse("Ctrl+X") };
+        cutItem.Click += (_, _) => inputTextBox.Cut();
+        
+        var copyItem = new MenuItem { Header = "复制(_C)", HotKey = KeyGesture.Parse("Ctrl+C") };
+        copyItem.Click += (_, _) => inputTextBox.Copy();
+        
+        var pasteItem = new MenuItem { Header = "粘贴(_V)", HotKey = KeyGesture.Parse("Ctrl+V") };
+        pasteItem.Click += (_, _) => inputTextBox.Paste();
+        
+        var selectAllItem = new MenuItem { Header = "全选(_A)", HotKey = KeyGesture.Parse("Ctrl+A") };
+        selectAllItem.Click += (_, _) => inputTextBox.SelectAll();
+
+        var items = new List<Control>
+        {
+            cutItem,
+            copyItem,
+            pasteItem,
+            new Separator(),
+            selectAllItem
+        };
+        
+        menu.ItemsSource = items;
+        inputTextBox.ContextMenu = menu;
     }
 
     private void OnTogglePointerPressed(object? sender, PointerPressedEventArgs e)

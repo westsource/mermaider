@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -10,6 +12,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using AvaloniaEdit;
 using AvaloniaWebView;
 using Mermaider.Models;
@@ -32,7 +35,6 @@ public partial class MainWindow : Window
     private PropertyInfo? _webViewUrlProperty;
     private string? _pendingPreviewHtml;
     private string? _previewTempDir;
-    private string? _previewHtmlPath;
     private bool _webViewAttached;
     private bool _webViewInitTried;
     private bool _isClosing;
@@ -58,6 +60,133 @@ public partial class MainWindow : Window
         DataContextChanged += OnDataContextChanged;
         AttachPreviewHandlers();
         Closing += OnClosing;
+        KeyBindings.AddRange(CreateEditorKeyBindings());
+    }
+
+    private List<KeyBinding> CreateEditorKeyBindings()
+    {
+        var bindings = new List<KeyBinding>();
+        
+        bindings.Add(CreateViewModelKeyBinding("Ctrl+N", nameof(MainViewModel.NewFileCommand)));
+        bindings.Add(CreateViewModelKeyBinding("Ctrl+O", nameof(MainViewModel.OpenFileCommand)));
+        bindings.Add(CreateViewModelKeyBinding("Ctrl+S", nameof(MainViewModel.SaveFileCommand)));
+        bindings.Add(CreateViewModelKeyBinding("Ctrl+Shift+S", nameof(MainViewModel.SaveFileAsCommand)));
+        bindings.Add(CreateViewModelKeyBinding("Ctrl+W", nameof(MainViewModel.CloseCurrentTabCommand)));
+        bindings.Add(CreateViewModelKeyBinding("Ctrl+Q", nameof(MainViewModel.ExitCommand)));
+        bindings.Add(CreateConditionalKeyBinding("Ctrl+Z", nameof(UndoEditor)));
+        bindings.Add(CreateConditionalKeyBinding("Ctrl+Y", nameof(RedoEditor)));
+        bindings.Add(CreateConditionalKeyBinding("Ctrl+Shift+Z", nameof(RedoEditor)));
+        bindings.Add(CreateConditionalKeyBinding("Ctrl+X", nameof(CutEditor)));
+        bindings.Add(CreateConditionalKeyBinding("Ctrl+C", nameof(CopyEditor)));
+        bindings.Add(CreateConditionalKeyBinding("Ctrl+V", nameof(PasteEditor)));
+        bindings.Add(CreateConditionalKeyBinding("Ctrl+A", nameof(SelectAllEditor)));
+        
+        return bindings;
+    }
+
+    private KeyBinding CreateViewModelKeyBinding(string gesture, string commandPropertyName)
+    {
+        var binding = new KeyBinding();
+        binding.Gesture = KeyGesture.Parse(gesture);
+        binding.Command = new ViewModelCommand(this, commandPropertyName);
+        return binding;
+    }
+
+    private KeyBinding CreateConditionalKeyBinding(string gesture, string actionName)
+    {
+        var binding = new KeyBinding();
+        binding.Gesture = KeyGesture.Parse(gesture);
+        binding.Command = new ConditionalEditorCommand(this, actionName);
+        return binding;
+    }
+
+    private bool IsCodeEditorFocused()
+    {
+        if (_codeEditor == null) return false;
+#pragma warning disable CS8602
+        var focusedElement = FocusManager.GetFocusedElement();
+#pragma warning restore CS8602
+        if (focusedElement == null) return false;
+        if (focusedElement is not Visual focused) return false;
+        
+        if (ReferenceEquals(focused, _codeEditor) || ReferenceEquals(focused, _codeEditor.TextArea))
+            return true;
+        
+        var parent = focused.GetVisualParent();
+        while (parent != null)
+        {
+            if (ReferenceEquals(parent, _codeEditor) || ReferenceEquals(parent, _codeEditor.TextArea))
+                return true;
+            parent = parent.GetVisualParent();
+        }
+        
+        return false;
+    }
+
+    private class ConditionalEditorCommand : ICommand
+    {
+        private readonly MainWindow _window;
+        private readonly MethodInfo? _method;
+
+        public ConditionalEditorCommand(MainWindow window, string actionName)
+        {
+            _window = window;
+            _method = window.GetType().GetMethod(actionName);
+        }
+
+#pragma warning disable CS0067
+        public event EventHandler? CanExecuteChanged;
+#pragma warning restore CS0067
+
+        public bool CanExecute(object? parameter)
+        {
+            return _window.IsCodeEditorFocused() && _method != null;
+        }
+
+        public void Execute(object? parameter)
+        {
+            if (_method != null && _window.IsCodeEditorFocused())
+            {
+                _method.Invoke(_window, null);
+            }
+        }
+    }
+
+    private class ViewModelCommand : ICommand
+    {
+        private readonly MainWindow _window;
+        private readonly string _commandPropertyName;
+
+        public ViewModelCommand(MainWindow window, string commandPropertyName)
+        {
+            _window = window;
+            _commandPropertyName = commandPropertyName;
+        }
+
+#pragma warning disable CS0067
+        public event EventHandler? CanExecuteChanged;
+#pragma warning restore CS0067
+
+        public bool CanExecute(object? parameter)
+        {
+            var command = GetCommand();
+            return command?.CanExecute(parameter) ?? true;
+        }
+
+        public void Execute(object? parameter)
+        {
+            var command = GetCommand();
+            command?.Execute(parameter);
+        }
+
+        private ICommand? GetCommand()
+        {
+            var viewModel = _window._viewModel;
+            if (viewModel == null) return null;
+            
+            var property = viewModel.GetType().GetProperty(_commandPropertyName);
+            return property?.GetValue(viewModel) as ICommand;
+        }
     }
 
     private void InitializeComponent()
@@ -539,15 +668,20 @@ public partial class MainWindow : Window
         }
 
         EnsurePreviewFilesReady();
-        if (string.IsNullOrWhiteSpace(_previewHtmlPath))
+        if (string.IsNullOrWhiteSpace(_previewTempDir))
         {
             throw new InvalidOperationException("预览文件初始化失败。");
         }
 
-        File.WriteAllText(_previewHtmlPath, _pendingPreviewHtml, Encoding.UTF8);
-        var previewUri = new Uri(_previewHtmlPath);
-        var previewUriString = previewUri.AbsoluteUri + "?t=" + DateTime.Now.Ticks;
-        var cacheBustedUri = new Uri(previewUriString);
+        foreach (var oldFile in Directory.GetFiles(_previewTempDir, "preview_*.html"))
+        {
+            try { File.Delete(oldFile); } catch { }
+        }
+
+        var htmlPath = Path.Combine(_previewTempDir, $"preview_{DateTime.Now.Ticks}.html");
+        File.WriteAllText(htmlPath, _pendingPreviewHtml, Encoding.UTF8);
+        var previewUri = new Uri(htmlPath);
+        var previewUriString = previewUri.AbsoluteUri;
 
         if (_webViewNavigateMethod != null)
         {
@@ -561,7 +695,7 @@ public partial class MainWindow : Window
 
             if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Uri))
             {
-                _webViewNavigateMethod.Invoke(_previewWebViewControl, new object[] { cacheBustedUri });
+                _webViewNavigateMethod.Invoke(_previewWebViewControl, new object[] { previewUri });
                 _pendingPreviewHtml = null;
                 return;
             }
@@ -569,7 +703,7 @@ public partial class MainWindow : Window
 
         if (_webViewSourceProperty != null && _webViewSourceProperty.PropertyType == typeof(Uri))
         {
-            _webViewSourceProperty.SetValue(_previewWebViewControl, cacheBustedUri);
+            _webViewSourceProperty.SetValue(_previewWebViewControl, previewUri);
             _pendingPreviewHtml = null;
             return;
         }
@@ -583,7 +717,7 @@ public partial class MainWindow : Window
 
         if (_webViewUrlProperty != null && _webViewUrlProperty.PropertyType == typeof(Uri))
         {
-            _webViewUrlProperty.SetValue(_previewWebViewControl, cacheBustedUri);
+            _webViewUrlProperty.SetValue(_previewWebViewControl, previewUri);
             _pendingPreviewHtml = null;
             return;
         }
@@ -600,16 +734,14 @@ public partial class MainWindow : Window
 
     private void EnsurePreviewFilesReady()
     {
-        if (!string.IsNullOrWhiteSpace(_previewHtmlPath) && File.Exists(_previewHtmlPath))
+        if (string.IsNullOrWhiteSpace(_previewTempDir) || !Directory.Exists(_previewTempDir))
         {
-            return;
+            _previewTempDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Mermaider",
+                "webpreview");
+            Directory.CreateDirectory(_previewTempDir);
         }
-
-        _previewTempDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Mermaider",
-            "webpreview");
-        Directory.CreateDirectory(_previewTempDir);
 
         var scriptPath = Path.Combine(_previewTempDir, "mermaid.min.js");
         if (!File.Exists(scriptPath))
@@ -619,8 +751,6 @@ public partial class MainWindow : Window
             using var fileStream = File.Create(scriptPath);
             scriptStream.CopyTo(fileStream);
         }
-
-        _previewHtmlPath = Path.Combine(_previewTempDir, "preview.html");
     }
 
 }

@@ -24,18 +24,15 @@ public class MermaidService
     public MermaidService()
     {
         var appDir = AppContext.BaseDirectory;
-        var embeddedToolsDir = EmbeddedToolsService.EnsureExtractedTools();
         
         var possiblePaths = new[]
         {
-            !string.IsNullOrEmpty(embeddedToolsDir) ? Path.Combine(embeddedToolsDir, "mmdc.cmd") : null,
+            Path.Combine(appDir, "tools", "mmdc.cmd"),
             Path.Combine(appDir, "..", "..", "..", "tools", "mmdc.cmd"),
             Path.Combine(appDir, "..", "..", "..", "..", "..", "tools", "mmdc.cmd"),
-            Path.Combine(appDir, "tools", "mmdc.cmd"),
         };
 
-        _mmdcPath = possiblePaths.FirstOrDefault(path => !string.IsNullOrEmpty(path) && File.Exists(path))
-            ?? Path.Combine(appDir, "tools", "mmdc.cmd");
+        _mmdcPath = possiblePaths.FirstOrDefault(File.Exists) ?? Path.Combine(appDir, "tools", "mmdc.cmd");
         _toolsDir = Path.GetDirectoryName(_mmdcPath) ?? "";
     }
 

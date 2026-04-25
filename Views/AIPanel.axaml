@@ -97,14 +97,15 @@
             <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="8,6">
                 <Grid ColumnDefinitions="*,Auto,Auto">
                     <TextBox Grid.Column="0" 
-                             Text="{Binding InputText}"
-                             Watermark="描述你想要的图表..."
-                             AcceptsReturn="False"
-                             FontSize="12"
-                             Padding="8,6"
-                             CornerRadius="6"
-                             BorderBrush="#D0D0D0"
-                             KeyDown="OnInputKeyDown"/>
+                              x:Name="InputTextBox"
+                              Text="{Binding InputText}"
+                              Watermark="描述你想要的图表..."
+                              AcceptsReturn="False"
+                              FontSize="12"
+                              Padding="8,6"
+                              CornerRadius="6"
+                              BorderBrush="#D0D0D0"
+                              KeyDown="OnInputKeyDown"/>
                     
                     <ComboBox Grid.Column="1"
                               Width="120" Height="28" Margin="8,0,0,0"
