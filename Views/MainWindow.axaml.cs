@@ -600,6 +600,7 @@ public partial class MainWindow : Window
 
         if (_previewWebViewControl != null)
         {
+            _webViewAttached = true;
             return true;
         }
 

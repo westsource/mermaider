@@ -929,6 +929,24 @@ public partial class MainViewModel : ViewModelBase
         _ = dialog.ShowDialog(_ownerWindow);
     }
 
+    [RelayCommand]
+    private void OpenMermaidDocs()
+    {
+        try
+        {
+            var url = "https://mermaid.js.org/intro/";
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+            StatusMessage = "无法打开 Mermaid 文档链接";
+        }
+    }
+
     public void UpdatePreviewFitScale(Size viewportSize)
     {
         PreviewFitScale = 1.0;
@@ -993,7 +1011,12 @@ public partial class MainViewModel : ViewModelBase
 
     private static string GetDefaultMermaidCode()
     {
-        return string.Empty;
+        return @"graph TD
+    A[开始] --> B{判断}
+    B -->|是| C[处理A]
+    B -->|否| D[处理B]
+    C --> E[结束]
+    D --> E";
     }
 
     public void SetInitialContent()

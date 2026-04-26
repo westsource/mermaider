@@ -12,17 +12,29 @@ A local Mermaid diagram editor built with C# Avalonia, featuring real-time previ
 - **Multi-tab Support** - Edit multiple Mermaid diagrams with independent tabs
 - **Debounced Rendering** - Auto-renders after 350ms of inactivity to avoid excessive refreshes
 
+### AI Assistant
+- **Intelligent Chat** - Built-in AI assistant for generating Mermaid diagram code via natural language
+- **Multi-model Support** - Support for multiple AI service providers
+  - OpenAI (GPT-4o, etc.)
+  - Azure OpenAI
+  - Ollama (local deployment)
+  - Custom API endpoints
+- **Code Application** - One-click to apply AI-generated code to the editor
+- **Conversation History** - Preserves conversation context for continuous interaction
+- **Configurable Parameters** - Adjust Temperature, MaxTokens, and other parameters
+
 ### Preview Interaction
 - **Drag to Pan** - Hold left mouse button and drag to move the diagram in the preview area
 - **Scroll to Zoom** - Use mouse wheel to zoom in/out in the preview area
 - **Double-click to Fit** - Double-click the preview area to auto-fit the diagram to the viewport
-- **Editor Toggle** - Click the splitter bar to hide/show the editor for full-screen preview
+- **Editor Toggle** - Click the toggle button in the splitter bar to hide/show the editor for full-screen preview
 
 ### File Operations
 - Create / Open / Save Mermaid files (.mmd / .mermaid)
 - Command-line argument support for opening files
 - Recent files history (up to 10 files)
 - Save confirmation dialog when closing unsaved tabs
+- Save confirmation when closing the application with unsaved changes
 - Automatically switches to existing tab when reopening the same file
 
 ### Export Features
@@ -33,6 +45,8 @@ A local Mermaid diagram editor built with C# Avalonia, featuring real-time previ
 
 ### UI Features
 - Resizable editor/preview splitter (drag the splitter bar)
+- Toggle button built into the splitter bar for hiding/showing the editor
+- AI assistant panel can be expanded/collapsed with adjustable height
 - Modern Fluent theme interface
 - Auto-save window layout settings (editor ratio, zoom level, etc.)
 - Automatic crash log recording
@@ -117,7 +131,15 @@ Enter or modify Mermaid code in the left editor panel. The right preview area up
 - **Pan**: Hold left mouse button and drag in the preview area
 - **Zoom**: Scroll mouse wheel in the preview area (up to zoom in, down to zoom out)
 - **Fit to Viewport**: Double-click the preview area
-- **Toggle Editor**: Click the splitter bar between editor and preview
+- **Toggle Editor**: Click the toggle button in the splitter bar between editor and preview
+
+### AI Assistant
+
+1. Click the "AI Assistant" button at the bottom to expand the panel
+2. Describe the diagram you want in the input box (e.g., "Draw a user login flowchart")
+3. AI will generate the corresponding Mermaid code
+4. Click "Apply Code" to insert the generated code into the editor
+5. Click the settings icon to configure AI model parameters
 
 ## Example Code
 

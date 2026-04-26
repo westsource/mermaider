@@ -7,9 +7,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\mermaider32.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    <Version>1.0.260425.4</Version>
+    <Version>1.0.260426.1</Version>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.260.425</FileVersion>
+    <FileVersion>1.0.260.426</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,4 +30,18 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <!-- Workaround: Avalonia 11.3.0 path handling fails on .NET 10 SDK with mixed \/ path separators -->
+  <PropertyGroup>
+    <AvaloniaResourcesTemporaryFilePath>$(IntermediateOutputPath)Avalonia\resources</AvaloniaResourcesTemporaryFilePath>
+    <_AvaloniaResourcesInputsCacheFilePath>$(IntermediateOutputPath)Avalonia\Resources.Inputs.cache</_AvaloniaResourcesInputsCacheFilePath>
+  </PropertyGroup>
+  <Target Name="CreateAvaloniaAvaloniaDir" BeforeTargets="_GenerateAvaloniaResourcesDependencyCache">
+    <Exec Command="mkdir &quot;$(IntermediateOutputPath)Avalonia\resources&quot; 2>nul" IgnoreExitCode="true" />
+  </Target>
+
+  <!-- Workaround: framework-dependent builds (Debug) don't copy native WebView2Loader.dll from NuGet -->
+  <Target Name="CopyWebView2LoaderNative" AfterTargets="Build" Condition="!Exists('$(OutputPath)WebView2Loader.dll') And '$(OS)' == 'Windows_NT'">
+    <Copy SourceFiles="$(NuGetPackageRoot)webview.avalonia.windows\11.0.0.1\runtimes\win-x64\native\WebView2Loader.dll"
+          DestinationFolder="$(OutputPath)" />
+  </Target>
 </Project>

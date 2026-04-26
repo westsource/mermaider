@@ -44,6 +44,8 @@
                 <Separator/>
                 <MenuItem Header="关闭当前标签(_W)" InputGesture="Ctrl+W" Command="{Binding CloseCurrentTabCommand}"/>
                 <Separator/>
+                <MenuItem Header="AI 设置(_I)..." Command="{Binding OpenAISettingsCommand}"/>
+                <Separator/>
                 <MenuItem Header="退出(_X)" InputGesture="Ctrl+Q" Command="{Binding ExitCommand}"/>
             </MenuItem>
             <MenuItem Header="编辑(_E)">
@@ -56,7 +58,7 @@
                 <MenuItem Header="全选(_A)" InputGesture="Ctrl+A" Command="{Binding SelectAllCommand}" IsEnabled="{Binding CanSelectAllAction}"/>
             </MenuItem>
             <MenuItem Header="帮助(_H)">
-                <MenuItem Header="AI 设置(_I)..." Command="{Binding OpenAISettingsCommand}"/>
+                <MenuItem Header="Mermaid 规范(_M)..." Command="{Binding OpenMermaidDocsCommand}"/>
                 <Separator/>
                 <MenuItem Header="关于(_A)..." Command="{Binding AboutCommand}"/>
             </MenuItem>
