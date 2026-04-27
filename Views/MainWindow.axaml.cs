@@ -33,10 +33,15 @@ public partial class MainWindow : Window
     private MethodInfo? _webViewNavigateMethod;
     private PropertyInfo? _webViewSourceProperty;
     private PropertyInfo? _webViewUrlProperty;
+    private MethodInfo? _webViewExecuteScriptMethod;
+    private object? _coreWebView2;
+    private MethodInfo? _coreWebView2ExecuteScriptMethod;
     private string? _pendingPreviewHtml;
     private string? _previewTempDir;
+    private string? _previewHtmlPath;
     private bool _webViewAttached;
     private bool _webViewInitTried;
+    private bool _webViewPageLoaded;
     private bool _isClosing;
 
     private bool _isDraggingSplitter;
@@ -580,13 +585,174 @@ public partial class MainWindow : Window
 
         try
         {
-            _pendingPreviewHtml = html;
-            TryApplyPendingWebPreview();
+            if (_webViewPageLoaded)
+            {
+                UpdatePreviewViaScript();
+            }
+            else
+            {
+                _pendingPreviewHtml = html;
+                TryApplyPendingWebPreview();
+            }
         }
         catch (Exception ex)
         {
             _viewModel.StatusMessage = $"WebView 预览失败: {ex.Message}";
         }
+    }
+
+    private async void UpdatePreviewViaScript()
+    {
+        if (_viewModel?.CurrentTab?.Content == null) return;
+
+        var code = _viewModel.CurrentTab.Content;
+        var jsonCode = System.Text.Json.JsonSerializer.Serialize(code);
+        var script = $"renderDiagram({jsonCode})";
+
+        try
+        {
+            if (_webViewExecuteScriptMethod != null)
+            {
+                _webViewExecuteScriptMethod.Invoke(_previewWebViewControl, new object[] { script });
+            }
+            else if (_coreWebView2ExecuteScriptMethod != null && _coreWebView2 != null)
+            {
+                _coreWebView2ExecuteScriptMethod.Invoke(_coreWebView2, new object[] { script });
+            }
+            else
+            {
+                _webViewPageLoaded = false;
+                _pendingPreviewHtml = _viewModel.CurrentPreviewHtml;
+                TryApplyPendingWebPreview();
+            }
+        }
+        catch
+        {
+            _webViewPageLoaded = false;
+            _pendingPreviewHtml = _viewModel.CurrentPreviewHtml;
+            TryApplyPendingWebPreview();
+        }
+    }
+
+    private void TryApplyPendingWebPreview()
+    {
+        if (_previewWebViewControl == null || string.IsNullOrWhiteSpace(_pendingPreviewHtml))
+        {
+            return;
+        }
+
+        if (!_webViewAttached)
+        {
+            return;
+        }
+
+        EnsurePreviewFilesReady();
+        if (string.IsNullOrWhiteSpace(_previewHtmlPath))
+        {
+            throw new InvalidOperationException("预览文件初始化失败。");
+        }
+
+        File.WriteAllText(_previewHtmlPath, _pendingPreviewHtml, Encoding.UTF8);
+        var previewUri = new Uri(_previewHtmlPath);
+        var previewUriString = previewUri.AbsoluteUri;
+
+        if (_webViewNavigateMethod != null)
+        {
+            var parameters = _webViewNavigateMethod.GetParameters();
+            if (parameters.Length == 1 && parameters[0].ParameterType == typeof(string))
+            {
+                _webViewNavigateMethod.Invoke(_previewWebViewControl, new object[] { previewUriString });
+                _pendingPreviewHtml = null;
+                _webViewPageLoaded = true;
+                return;
+            }
+
+            if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Uri))
+            {
+                _webViewNavigateMethod.Invoke(_previewWebViewControl, new object[] { previewUri });
+                _pendingPreviewHtml = null;
+                _webViewPageLoaded = true;
+                return;
+            }
+        }
+
+        if (_webViewSourceProperty != null && _webViewSourceProperty.PropertyType == typeof(Uri))
+        {
+            _webViewSourceProperty.SetValue(_previewWebViewControl, previewUri);
+            _pendingPreviewHtml = null;
+            _webViewPageLoaded = true;
+            return;
+        }
+
+        if (_webViewSourceProperty != null && _webViewSourceProperty.PropertyType == typeof(string))
+        {
+            _webViewSourceProperty.SetValue(_previewWebViewControl, previewUriString);
+            _pendingPreviewHtml = null;
+            _webViewPageLoaded = true;
+            return;
+        }
+
+        if (_webViewUrlProperty != null && _webViewUrlProperty.PropertyType == typeof(Uri))
+        {
+            _webViewUrlProperty.SetValue(_previewWebViewControl, previewUri);
+            _pendingPreviewHtml = null;
+            _webViewPageLoaded = true;
+            return;
+        }
+
+        if (_webViewUrlProperty != null && _webViewUrlProperty.PropertyType == typeof(string))
+        {
+            _webViewUrlProperty.SetValue(_previewWebViewControl, previewUriString);
+            _pendingPreviewHtml = null;
+            _webViewPageLoaded = true;
+            return;
+        }
+
+        throw new InvalidOperationException("当前 WebView 版本不支持可用导航方式（Navigate/Source/Url）。");
+    }
+
+    private void CleanupStalePreviewFiles()
+    {
+        var dir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Mermaider",
+            "webpreview");
+        if (!Directory.Exists(dir)) return;
+        var cutoff = DateTime.Now.AddDays(-7);
+        foreach (var oldFile in Directory.GetFiles(dir, "preview*.html"))
+        {
+            try
+            {
+                if (File.GetCreationTime(oldFile) < cutoff)
+                    File.Delete(oldFile);
+            }
+            catch { }
+        }
+    }
+
+    private void EnsurePreviewFilesReady()
+    {
+        if (!string.IsNullOrWhiteSpace(_previewHtmlPath) && File.Exists(_previewHtmlPath))
+        {
+            return;
+        }
+
+        _previewTempDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Mermaider",
+            "webpreview");
+        Directory.CreateDirectory(_previewTempDir);
+
+        var scriptPath = Path.Combine(_previewTempDir, "mermaid.min.js");
+        if (!File.Exists(scriptPath))
+        {
+            var scriptUri = new Uri("avares://Mermaider/Assets/mermaid.min.js");
+            using var scriptStream = AssetLoader.Open(scriptUri);
+            using var fileStream = File.Create(scriptPath);
+            scriptStream.CopyTo(fileStream);
+        }
+
+        _previewHtmlPath = Path.Combine(_previewTempDir, "preview.html");
     }
 
     private bool EnsureWebViewReady()
@@ -629,24 +795,53 @@ public partial class MainWindow : Window
             _webViewNavigateMethod = webViewType.GetMethod("Navigate", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
             _webViewSourceProperty = webViewType.GetProperty("Source", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
             _webViewUrlProperty = webViewType.GetProperty("Url", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            _webViewExecuteScriptMethod = webViewType.GetMethod("ExecuteScriptAsync", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
+            var coreWebView2Property = webViewType.GetProperty("CoreWebView2", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (coreWebView2Property != null && coreWebView2Property.PropertyType != typeof(object))
+            {
+                webViewControl.AttachedToVisualTree += (_, _) =>
+                {
+                    _webViewAttached = true;
+                    Dispatcher.UIThread.Post(async () =>
+                    {
+                        await Task.Delay(800);
+                        try
+                        {
+                            _coreWebView2 = coreWebView2Property.GetValue(_previewWebViewControl);
+                            if (_coreWebView2 != null)
+                            {
+                                _coreWebView2ExecuteScriptMethod = _coreWebView2.GetType()
+                                    .GetMethod("ExecuteScriptAsync", BindingFlags.Public | BindingFlags.Instance);
+                            }
+                            TryApplyPendingWebPreview();
+                        }
+                        catch
+                        {
+                        }
+                    }, DispatcherPriority.Background);
+                };
+            }
+            else
+            {
+                webViewControl.AttachedToVisualTree += (_, _) =>
+                {
+                    _webViewAttached = true;
+                    Dispatcher.UIThread.Post(async () =>
+                    {
+                        await Task.Delay(500);
+                        try
+                        {
+                            TryApplyPendingWebPreview();
+                        }
+                        catch
+                        {
+                        }
+                    }, DispatcherPriority.Background);
+                };
+            }
             webViewControl.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
             webViewControl.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
-            webViewControl.AttachedToVisualTree += (_, _) =>
-            {
-                _webViewAttached = true;
-                Dispatcher.UIThread.Post(async () =>
-                {
-                    await Task.Delay(500);
-                    try
-                    {
-                        TryApplyPendingWebPreview();
-                    }
-                    catch
-                    {
-                    }
-                }, DispatcherPriority.Background);
-            };
             _previewWebHost.Child = webViewControl;
             _previewWebViewControl = webViewControl;
             return true;
@@ -656,117 +851,5 @@ public partial class MainWindow : Window
             return false;
         }
     }
-
-    private void TryApplyPendingWebPreview()
-    {
-        if (_previewWebViewControl == null || string.IsNullOrWhiteSpace(_pendingPreviewHtml))
-        {
-            return;
-        }
-
-        if (!_webViewAttached)
-        {
-            return;
-        }
-
-        EnsurePreviewFilesReady();
-        if (string.IsNullOrWhiteSpace(_previewTempDir))
-        {
-            throw new InvalidOperationException("预览文件初始化失败。");
-        }
-
-        var htmlPath = Path.Combine(_previewTempDir, $"preview_{DateTime.Now.Ticks}.html");
-        File.WriteAllText(htmlPath, _pendingPreviewHtml, Encoding.UTF8);
-        var previewUri = new Uri(htmlPath);
-        var previewUriString = previewUri.AbsoluteUri;
-
-        if (_webViewNavigateMethod != null)
-        {
-            var parameters = _webViewNavigateMethod.GetParameters();
-            if (parameters.Length == 1 && parameters[0].ParameterType == typeof(string))
-            {
-                _webViewNavigateMethod.Invoke(_previewWebViewControl, new object[] { previewUriString });
-                _pendingPreviewHtml = null;
-                return;
-            }
-
-            if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Uri))
-            {
-                _webViewNavigateMethod.Invoke(_previewWebViewControl, new object[] { previewUri });
-                _pendingPreviewHtml = null;
-                return;
-            }
-        }
-
-        if (_webViewSourceProperty != null && _webViewSourceProperty.PropertyType == typeof(Uri))
-        {
-            _webViewSourceProperty.SetValue(_previewWebViewControl, previewUri);
-            _pendingPreviewHtml = null;
-            return;
-        }
-
-        if (_webViewSourceProperty != null && _webViewSourceProperty.PropertyType == typeof(string))
-        {
-            _webViewSourceProperty.SetValue(_previewWebViewControl, previewUriString);
-            _pendingPreviewHtml = null;
-            return;
-        }
-
-        if (_webViewUrlProperty != null && _webViewUrlProperty.PropertyType == typeof(Uri))
-        {
-            _webViewUrlProperty.SetValue(_previewWebViewControl, previewUri);
-            _pendingPreviewHtml = null;
-            return;
-        }
-
-        if (_webViewUrlProperty != null && _webViewUrlProperty.PropertyType == typeof(string))
-        {
-            _webViewUrlProperty.SetValue(_previewWebViewControl, previewUriString);
-            _pendingPreviewHtml = null;
-            return;
-        }
-
-        throw new InvalidOperationException("当前 WebView 版本不支持可用导航方式（Navigate/Source/Url）。");
-    }
-
-    private void CleanupStalePreviewFiles()
-    {
-        var dir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Mermaider",
-            "webpreview");
-        if (!Directory.Exists(dir)) return;
-        var cutoff = DateTime.Now.AddDays(-7);
-        foreach (var oldFile in Directory.GetFiles(dir, "preview_*.html"))
-        {
-            try
-            {
-                if (File.GetCreationTime(oldFile) < cutoff)
-                    File.Delete(oldFile);
-            }
-            catch { }
-        }
-    }
-
-    private void EnsurePreviewFilesReady()
-    {
-        if (string.IsNullOrWhiteSpace(_previewTempDir) || !Directory.Exists(_previewTempDir))
-        {
-            _previewTempDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Mermaider",
-                "webpreview");
-            Directory.CreateDirectory(_previewTempDir);
-        }
-
-        var scriptPath = Path.Combine(_previewTempDir, "mermaid.min.js");
-        if (!File.Exists(scriptPath))
-        {
-            var scriptUri = new Uri("avares://Mermaider/Assets/mermaid.min.js");
-            using var scriptStream = AssetLoader.Open(scriptUri);
-            using var fileStream = File.Create(scriptPath);
-            scriptStream.CopyTo(fileStream);
-        }
-    }
-
 }
+

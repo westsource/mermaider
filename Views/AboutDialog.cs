@@ -13,7 +13,7 @@ public sealed class AboutDialog : Window
     {
         Title = "关于";
         Width = 460;
-        Height = 250;
+        Height = 300;
         CanResize = false;
         ShowInTaskbar = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;

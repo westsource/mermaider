@@ -921,7 +921,7 @@ public partial class MainViewModel : ViewModelBase
     {
         var dialog = new AboutDialog(
             "Mermaider",
-            "本地 Mermaid 图表编辑器，支持代码编辑、语法高亮、实时预览、语法检测和图片导出。",
+            "本地 Mermaid 图表编辑器。支持代码编辑、语法高亮、实时预览、缩放拖拽、语法检测、图片导出；集成 AI 助手，可通过自然语言生成图表；支持多标签页多文件编辑；本地渲染，数据不上传。",
             "黄超（道荣）",
             AppVersion
         );
@@ -1084,7 +1084,6 @@ public partial class MainViewModel : ViewModelBase
   <div id="root"><div id="diagram"></div></div>
   <script src="./mermaid.min.js"></script>
   <script>
-    const code = {{mermaidCodeJson}};
     const root = document.getElementById('root');
     const target = document.getElementById('diagram');
     let scale = 1;
@@ -1122,8 +1121,34 @@ public partial class MainViewModel : ViewModelBase
     }
 
     function showError(message) {
-      const safeMessage = String(message ?? '预览失败').replace(/[<>&]/g, s => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[s]));
+      const safeMessage = String(message ?? '').replace(/[<>&]/g, s => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[s]));
       target.innerHTML = `<pre class="error">${safeMessage}</pre>`;
+    }
+
+    async function renderDiagram(code) {
+      try {
+        if (!code || !code.trim()) {
+          target.innerHTML = '';
+          return;
+        }
+        if (!window.mermaid) {
+          showError('mermaid.js 暂未加载，请稍候');
+          return;
+        }
+        mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'default' });
+        const id = `mermaid-${Date.now()}`;
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.top = '-9999px';
+        container.style.left = '-9999px';
+        document.body.appendChild(container);
+        const { svg } = await mermaid.render(id, code, container);
+        target.innerHTML = svg;
+        container.remove();
+        requestAnimationFrame(() => fitToViewport());
+      } catch (err) {
+        showError(err && err.message ? err.message : err);
+      }
     }
 
     root.addEventListener('pointerdown', (e) => {
@@ -1174,31 +1199,7 @@ public partial class MainViewModel : ViewModelBase
       fitToViewport();
     });
 
-    (async () => {
-      try {
-        if (!code || !code.trim()) {
-          target.innerHTML = '';
-          return;
-        }
-        if (!window.mermaid) {
-          showError('未加载到本地 mermaid.js 资源');
-          return;
-        }
-        mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'default' });
-        const id = `mermaid-${Date.now()}`;
-        const container = document.createElement('div');
-        container.style.position = 'absolute';
-        container.style.top = '-9999px';
-        container.style.left = '-9999px';
-        document.body.appendChild(container);
-        const { svg } = await mermaid.render(id, code, container);
-        target.innerHTML = svg;
-        container.remove();
-        requestAnimationFrame(() => fitToViewport());
-      } catch (err) {
-        showError(err && err.message ? err.message : err);
-      }
-    })();
+    renderDiagram({{mermaidCodeJson}});
   </script>
 </body>
 </html>
