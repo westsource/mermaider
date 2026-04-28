@@ -1,55 +1,53 @@
 # Mermaider - Mermaid Diagram Editor
 
-A local Mermaid diagram editor built with C# Avalonia, featuring real-time preview, syntax validation, and image export.
+A local Mermaid diagram editor built with C# Avalonia, featuring code editing, syntax highlighting, real-time preview with zoom/pan, syntax validation, image export and copy, and an AI assistant for generating diagrams via natural language. All rendering is done locally — no data uploaded.
 
 ## Features
 
-### Core Features
-- **Code Editing** - Edit Mermaid code with syntax highlighting and line numbers
-- **Real-time Preview** - Automatic diagram preview updates while editing (via WebView + Mermaid.js)
-- **Syntax Validation** - Real-time Mermaid syntax error detection and feedback
-- **Syntax Highlighting** - Mermaid syntax highlighting support
-- **Multi-tab Support** - Edit multiple Mermaid diagrams with independent tabs
+### Code Editing
+- **Syntax Highlighting** - Mermaid syntax highlighting with line numbers
+- **Multi-tab** - Edit multiple files independently with automatic tab switching
 - **Debounced Rendering** - Auto-renders after 350ms of inactivity to avoid excessive refreshes
 
-### AI Assistant
-- **Intelligent Chat** - Built-in AI assistant for generating Mermaid diagram code via natural language
-- **Multi-model Support** - Support for multiple AI service providers
-  - OpenAI (GPT-4o, etc.)
-  - Azure OpenAI
-  - Ollama (local deployment)
-  - Custom API endpoints
-- **Code Application** - One-click to apply AI-generated code to the editor
-- **Conversation History** - Preserves conversation context for continuous interaction
-- **Configurable Parameters** - Adjust Temperature, MaxTokens, and other parameters
+### Real-time Preview
+- **JavaScript Injection Updates** - Initial load via WebView file navigation; subsequent updates use `ExecuteScriptAsync` to inject JavaScript directly, bypassing file caching and navigation issues
+- **Global renderDiagram Function** - The `renderDiagram(code)` function is exposed globally for zero-latency script injection updates
+- **Drag to Pan** - Hold left mouse button and drag to move the diagram
+- **Scroll to Zoom** - Zoom from 0.2x to 6x via mouse wheel
+- **Double-click to Fit** - Auto-fit diagram to viewport on double-click
+- **Editor Toggle** - Hide/show the editor for full-screen preview
 
-### Preview Interaction
-- **Drag to Pan** - Hold left mouse button and drag to move the diagram in the preview area
-- **Scroll to Zoom** - Use mouse wheel to zoom in/out in the preview area
-- **Double-click to Fit** - Double-click the preview area to auto-fit the diagram to the viewport
-- **Editor Toggle** - Click the toggle button in the splitter bar to hide/show the editor for full-screen preview
+### Image Operations
+- **Save Image** - Export high-resolution PNG images (3x scale)
+- **Copy Image** - Copy diagram to system clipboard
 
 ### File Operations
 - Create / Open / Save Mermaid files (.mmd / .mermaid)
 - Command-line argument support for opening files
 - Recent files history (up to 10 files)
 - Save confirmation dialog when closing unsaved tabs
-- Save confirmation when closing the application with unsaved changes
-- Automatically switches to existing tab when reopening the same file
+- Unsaved change detection on application exit
 
-### Export Features
-- **Copy Image** - Copy diagram to clipboard (high resolution, 3x scale)
-- **Save Image** - Export in multiple formats
-  - PNG image (high resolution, 3x scale)
-  - JPEG image (high resolution, 3x scale)
+### AI Assistant
+- **Natural Language Generation** - Describe your diagram, AI generates Mermaid code automatically
+- **Multi-model Support** - OpenAI, Azure OpenAI, Ollama, Custom API
+- **One-click Apply** - Apply AI-generated code to the editor instantly, with revert support
+- **Conversation History** - Persisted to disk, supports continuous interaction
+- **Configurable Parameters** - Temperature, MaxTokens, and other settings
+- **Selectable Messages** - Chat message text (including code) is selectable and copyable
+- **Multi-line Input** - Input box supports multi-line text; Shift+Enter for newline, Enter to send
+- **Draggable Splitter** - Adjustable height splitter between chat history and input area
 
 ### UI Features
-- Resizable editor/preview splitter (drag the splitter bar)
-- Toggle button built into the splitter bar for hiding/showing the editor
-- AI assistant panel can be expanded/collapsed with adjustable height
-- Modern Fluent theme interface
-- Auto-save window layout settings (editor ratio, zoom level, etc.)
-- Automatic crash log recording
+- **Draggable Splitter** - Editor/preview ratio adjustable via drag
+- **Built-in Toggle Button** - Click the button in the splitter bar to hide/show the editor
+- **Fluent Theme** - Modern UI style
+- **Auto-save Layout** - Editor ratio, zoom level, AI panel state, and other settings auto-saved
+
+### Technical Details
+- Preview uses `CoreWebView2.ExecuteScriptAsync` for JavaScript injection, bypassing file:// URL caching and navigation restrictions
+- AI configuration Base URL is automatically sanitized (removes trailing `/chat/completions`)
+- Preview files are cleaned up by creation time (only keep last 7 days)
 
 ## Tech Stack
 
@@ -57,7 +55,7 @@ A local Mermaid diagram editor built with C# Avalonia, featuring real-time previ
 - **UI Framework**: Avalonia UI 11.3
 - **Architecture**: MVVM (CommunityToolkit.Mvvm)
 - **Code Editor**: AvaloniaEdit
-- **Preview Rendering**: Mermaid.js (real-time rendering via WebView)
+- **Preview Rendering**: Mermaid.js (real-time via WebView)
 - **Image Export**: Mermaid CLI 11.12.0 (embedded, for high-res image export)
 - **WebView**: WebView.Avalonia
 
@@ -136,82 +134,11 @@ Enter or modify Mermaid code in the left editor panel. The right preview area up
 ### AI Assistant
 
 1. Click the "AI Assistant" button at the bottom to expand the panel
-2. Describe the diagram you want in the input box (e.g., "Draw a user login flowchart")
+2. Describe the diagram you want in the input box (e.g., "Draw a user login flowchart"); Shift+Enter for newline, Enter to send
 3. AI will generate the corresponding Mermaid code
-4. Click "Apply Code" to insert the generated code into the editor
+4. Click "Apply Code" to insert the generated code into the editor; "Revert" to undo
 5. Click the settings icon to configure AI model parameters
-
-## Example Code
-
-### Flowchart
-
-```mermaid
-graph TD
-    A[Start] --> B{Decision}
-    B -->|Yes| C[Process A]
-    B -->|No| D[Process B]
-    C --> E[End]
-    D --> E
-```
-
-### Sequence Diagram
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Server
-    participant Database
-    User->>Server: Send Request
-    Server->>Database: Query Data
-    Database-->>Server: Return Result
-    Server-->>User: Send Response
-```
-
-### Pie Chart
-
-```mermaid
-pie title Data Distribution
-    "Type A" : 40
-    "Type B" : 30
-    "Type C" : 20
-    "Type D" : 10
-```
-
-### Class Diagram
-
-```mermaid
-classDiagram
-    class Animal {
-        +String name
-        +int age
-        +makeSound()
-    }
-    class Dog {
-        +bark()
-    }
-    class Cat {
-        +meow()
-    }
-    Animal <|-- Dog
-    Animal <|-- Cat
-```
-
-### Gantt Chart
-
-```mermaid
-gantt
-    title Project Timeline
-    dateFormat  YYYY-MM-DD
-    section Design
-    Requirements    :a1, 2024-01-01, 7d
-    UI Design       :a2, after a1, 5d
-    section Development
-    Frontend        :b1, after a2, 10d
-    Backend         :b2, after a2, 12d
-    section Testing
-    Functional Test :c1, after b1, 5d
-    Deployment      :c2, after c1, 2d
-```
+6. Chat messages are selectable and copyable; the input area height is adjustable via the drag splitter
 
 ## Keyboard Shortcuts
 
