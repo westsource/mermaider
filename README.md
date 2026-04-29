@@ -2,6 +2,12 @@
 
 一个基于 C# Avalonia 构建的本地 Mermaid 图表编辑器，支持代码编辑、语法高亮、实时预览、缩放拖拽、语法检测、图片导出与复制，集成 AI 助手通过自然语言生成图表，数据本地渲染不上传。
 
+## 界面截图
+
+![主界面](Mermaider_NELcF3ITQN.png)
+
+![AI助手](Mermaider_fxJXInfYWk.png)
+
 ## 功能特性
 
 ### 代码编辑
