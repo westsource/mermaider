@@ -7,11 +7,13 @@ using CommunityToolkit.Mvvm.Input;
 using Mermaider.Models;
 using Mermaider.Services;
 using Mermaider.Services.AIService;
+using Mermaider.Services.Localization;
 
 namespace Mermaider.ViewModels;
 
 public partial class AIPanelViewModel : ViewModelBase
 {
+    private static readonly Strings S = Strings.Instance;
     private readonly SettingsService _settingsService;
     private readonly AIConversationService _conversationService;
     private IAIService? _aiService;
@@ -33,7 +35,7 @@ public partial class AIPanelViewModel : ViewModelBase
     private double _panelHeight = 200;
 
     [ObservableProperty]
-    private string _statusMessage = "AI 助手就绪";
+    private string _statusMessage = Strings.Instance.AIReady;
 
     [ObservableProperty]
     private bool _isConfigured;
@@ -44,11 +46,20 @@ public partial class AIPanelViewModel : ViewModelBase
     [ObservableProperty]
     private AIModelConfig? _selectedModel;
 
-    public string ToggleButtonText => IsExpanded ? "AI 助手 ▼" : "AI 助手 ▲";
+    public string ToggleButtonText => IsExpanded ? $"{S.AIAssistant} ▼" : $"{S.AIAssistant} ▲";
 
     public bool HasMessages => Messages.Count > 0;
 
     public bool HasModels => AvailableModels.Count > 0;
+
+    public string AISettingsTooltip => S.AISettingsTooltip;
+    public string AIClearHistoryTooltip => S.AIClearHistoryTooltip;
+    public string AISelectModelTooltip => S.AISelectModelTooltip;
+    public string AIInputPlaceholder => S.AIInputPlaceholder;
+    public string AISend => S.AISend;
+    public string AIApply => S.AIApply;
+    public string AIRevert => S.AIRevert;
+    public string AICodeGenerated => S.AICodeGenerated;
 
     public event EventHandler<string>? CodeGenerated;
     public event EventHandler? ToggleRequested;
@@ -88,7 +99,7 @@ public partial class AIPanelViewModel : ViewModelBase
         if (SelectedModel == null)
         {
             IsConfigured = false;
-            StatusMessage = "请添加 AI 模型配置";
+            StatusMessage = S.AIConfigRequired;
             return;
         }
 
@@ -99,16 +110,16 @@ public partial class AIPanelViewModel : ViewModelBase
         {
             StatusMessage = SelectedModel.Provider switch
             {
-                AIProvider.OpenAI when string.IsNullOrWhiteSpace(SelectedModel.ApiKey) => "请配置 API Key",
-                AIProvider.AzureOpenAI when string.IsNullOrWhiteSpace(SelectedModel.ApiKey) => "请配置 Azure API Key",
-                AIProvider.Ollama => "请确保 Ollama 服务已启动",
-                AIProvider.Custom when string.IsNullOrWhiteSpace(SelectedModel.BaseUrl) => "请配置 Base URL",
-                _ => "请完善模型配置"
+                AIProvider.OpenAI when string.IsNullOrWhiteSpace(SelectedModel.ApiKey) => S.AIConfigApiKey,
+                AIProvider.AzureOpenAI when string.IsNullOrWhiteSpace(SelectedModel.ApiKey) => S.AIConfigAzureApiKey,
+                AIProvider.Ollama => S.AIConfigOllama,
+                AIProvider.Custom when string.IsNullOrWhiteSpace(SelectedModel.BaseUrl) => S.AIConfigBaseUrl,
+                _ => S.AIConfigComplete
             };
         }
         else
         {
-            StatusMessage = $"{SelectedModel.DisplayName} 已就绪";
+            StatusMessage = string.Format(S.AIReadyFormat, SelectedModel.DisplayName);
         }
     }
 
@@ -204,7 +215,7 @@ public partial class AIPanelViewModel : ViewModelBase
         Messages.Add(loadingMessage);
 
         IsLoading = true;
-        StatusMessage = "正在生成...";
+        StatusMessage = S.AIGenerating;
 
         try
         {
@@ -225,15 +236,15 @@ public partial class AIPanelViewModel : ViewModelBase
 
             if (!string.IsNullOrEmpty(response.GeneratedCode))
             {
-                StatusMessage = "代码已生成";
+                StatusMessage = S.AIGenerated;
             }
             else if (!string.IsNullOrEmpty(response.ErrorMessage))
             {
-                StatusMessage = $"错误: {response.ErrorMessage}";
+                StatusMessage = string.Format(S.AIErrorFormat, response.ErrorMessage);
             }
             else
             {
-                StatusMessage = "AI 助手已响应";
+                StatusMessage = S.AIResponded;
             }
         }
         catch (Exception ex)
@@ -245,12 +256,12 @@ public partial class AIPanelViewModel : ViewModelBase
                 {
                     Role = MessageRole.Assistant,
                     Content = string.Empty,
-                    ErrorMessage = $"发生错误: {ex.Message}",
+                    ErrorMessage = string.Format(S.AIGenerationError, ex.Message),
                     IsLoading = false,
                     Timestamp = DateTime.Now
                 };
             }
-            StatusMessage = $"错误: {ex.Message}";
+            StatusMessage = string.Format(S.AIErrorFormat, ex.Message);
         }
         finally
         {
@@ -265,7 +276,7 @@ public partial class AIPanelViewModel : ViewModelBase
             return;
 
         CodeGenerated?.Invoke(this, message.GeneratedCode);
-        StatusMessage = "代码已应用";
+        StatusMessage = S.CodeGenerated;
     }
 
     [RelayCommand]
@@ -275,7 +286,7 @@ public partial class AIPanelViewModel : ViewModelBase
             return;
 
         CodeGenerated?.Invoke(this, message.CodeBeforeGeneration);
-        StatusMessage = "代码已回退";
+        StatusMessage = S.CodeReverted;
     }
 
     [RelayCommand]
@@ -284,7 +295,7 @@ public partial class AIPanelViewModel : ViewModelBase
         _conversationService.ClearConversation(_currentFilePath);
         Messages.Clear();
         OnPropertyChanged(nameof(HasMessages));
-        StatusMessage = "对话历史已清空";
+        StatusMessage = S.ConversationCleared;
     }
 
     [RelayCommand]
@@ -311,6 +322,20 @@ public partial class AIPanelViewModel : ViewModelBase
     {
         LoadAvailableModels();
         InitializeAIService();
+    }
+
+    public void RefreshLocalization()
+    {
+        OnPropertyChanged(nameof(ToggleButtonText));
+        OnPropertyChanged(nameof(StatusMessage));
+        OnPropertyChanged(nameof(AISettingsTooltip));
+        OnPropertyChanged(nameof(AIClearHistoryTooltip));
+        OnPropertyChanged(nameof(AISelectModelTooltip));
+        OnPropertyChanged(nameof(AIInputPlaceholder));
+        OnPropertyChanged(nameof(AISend));
+        OnPropertyChanged(nameof(AIApply));
+        OnPropertyChanged(nameof(AIRevert));
+        OnPropertyChanged(nameof(AICodeGenerated));
     }
 
     public Func<string?>? GetCurrentCode { get; set; }

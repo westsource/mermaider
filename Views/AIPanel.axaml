@@ -26,20 +26,20 @@
                            FontSize="11" Foreground="#888888" Margin="10,0,0,0"
                            TextTrimming="CharacterEllipsis"/>
 
-                <Button Grid.Column="2" Content="⚙" 
-                        Width="24" Height="24" Padding="0" Margin="8,0,0,0"
-                        FontSize="14" Background="Transparent" BorderThickness="0"
-                        HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                        ToolTip.Tip="AI 设置"
-                        Command="{Binding OpenSettingsCommand}"/>
+<Button Grid.Column="2" Content="⚙" 
+                         Width="24" Height="24" Padding="0" Margin="8,0,0,0"
+                         FontSize="14" Background="Transparent" BorderThickness="0"
+                         HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                         ToolTip.Tip="{Binding AISettingsTooltip}"
+                         Command="{Binding OpenSettingsCommand}"/>
 
                 <Button Grid.Column="3" Content="🗑" 
-                        Width="24" Height="24" Padding="0" Margin="4,0,0,0"
-                        FontSize="12" Background="Transparent" BorderThickness="0"
-                        HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                        ToolTip.Tip="清空对话历史"
-                        Command="{Binding ClearHistoryCommand}"
-                        IsEnabled="{Binding HasMessages}"/>
+                         Width="24" Height="24" Padding="0" Margin="4,0,0,0"
+                         FontSize="12" Background="Transparent" BorderThickness="0"
+                         HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                         ToolTip.Tip="{Binding AIClearHistoryTooltip}"
+                         Command="{Binding ClearHistoryCommand}"
+                         IsEnabled="{Binding HasMessages}"/>
             </Grid>
         </Border>
 
@@ -62,13 +62,13 @@
                                     
                                     <StackPanel Orientation="Horizontal" Spacing="8"
                                                 IsVisible="{Binding GeneratedCode, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                        <TextBlock Text="✓ 代码已生成" FontSize="11" Foreground="#059669"/>
-                                        <Button Content="应用" FontSize="10" Padding="6,2"
+                                        <TextBlock Text="{Binding $parent[ItemsControl].((vm:AIPanelViewModel)DataContext).AICodeGenerated}" FontSize="11" Foreground="#059669"/>
+                                        <Button Content="{Binding $parent[ItemsControl].((vm:AIPanelViewModel)DataContext).AIApply}" FontSize="10" Padding="6,2"
                                                 Background="#E0F2F1" BorderThickness="0"
                                                 CornerRadius="4" Cursor="Hand"
                                                 Command="{Binding $parent[ItemsControl].((vm:AIPanelViewModel)DataContext).ApplyCodeCommand}"
                                                 CommandParameter="{Binding}"/>
-                                        <Button Content="回退" FontSize="10" Padding="6,2"
+                                        <Button Content="{Binding $parent[ItemsControl].((vm:AIPanelViewModel)DataContext).AIRevert}" FontSize="10" Padding="6,2"
                                                 Background="#FFF3E0" BorderThickness="0"
                                                 CornerRadius="4" Cursor="Hand"
                                                 IsVisible="{Binding CodeBeforeGeneration, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
@@ -107,7 +107,7 @@
                     <TextBox Grid.Row="0" 
                               x:Name="InputTextBox"
                               Text="{Binding InputText}"
-                              Watermark="描述你想要的图表... (Shift+Enter换行)"
+                              Watermark="{Binding AIInputPlaceholder}"
                               AcceptsReturn="True"
                               TextWrapping="Wrap"
                               FontSize="12"
@@ -125,7 +125,7 @@
                                   ItemsSource="{Binding AvailableModels}"
                                   SelectedItem="{Binding SelectedModel}"
                                   IsEnabled="{Binding !IsLoading}"
-                                  ToolTip.Tip="选择 AI 模型">
+                                  ToolTip.Tip="{Binding AISelectModelTooltip}">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate x:DataType="models:AIModelConfig">
                                     <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis"/>
@@ -133,7 +133,7 @@
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                         
-                        <Button Grid.Column="2" Content="发送"
+                        <Button Grid.Column="2" Content="{Binding AISend}"
                                 Width="60" Height="28" Margin="8,0,0,0"
                                 FontSize="12"
                                 HorizontalContentAlignment="Center"

@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Mermaider.Services.Localization;
 
 namespace Mermaider.Views;
 
@@ -16,9 +17,11 @@ public enum SaveChangesDialogResult
 
 public sealed class SaveChangesDialog : Window
 {
+    private static readonly Strings S = Strings.Instance;
+
     public SaveChangesDialog(string tabTitle)
     {
-        Title = "保存更改";
+        Title = S.SaveChangesTitle;
         Width = 420;
         Height = 160;
         CanResize = false;
@@ -27,14 +30,14 @@ public sealed class SaveChangesDialog : Window
 
         var message = new TextBlock
         {
-            Text = $"\"{tabTitle}\" 已修改，是否在关闭前保存？",
+            Text = string.Format(S.SaveChangesMessage, tabTitle),
             TextWrapping = TextWrapping.Wrap,
             FontSize = 14
         };
 
-        var saveButton = CreateButton("保存", true, (_, _) => Close(SaveChangesDialogResult.Save));
-        var dontSaveButton = CreateButton("不保存", false, (_, _) => Close(SaveChangesDialogResult.DontSave));
-        var cancelButton = CreateButton("取消", false, (_, _) => Close(SaveChangesDialogResult.Cancel));
+        var saveButton = CreateButton(S.SaveButton, true, (_, _) => Close(SaveChangesDialogResult.Save));
+        var dontSaveButton = CreateButton(S.DontSaveButton, false, (_, _) => Close(SaveChangesDialogResult.DontSave));
+        var cancelButton = CreateButton(S.CancelButton, false, (_, _) => Close(SaveChangesDialogResult.Cancel));
 
         Content = new Grid
         {

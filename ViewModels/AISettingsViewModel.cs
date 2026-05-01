@@ -8,12 +8,14 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Mermaider.Models;
 using Mermaider.Services;
+using Mermaider.Services.Localization;
 using Mermaider.Views;
 
 namespace Mermaider.ViewModels;
 
 public partial class AISettingsViewModel : ViewModelBase
 {
+    private static readonly Strings S = Strings.Instance;
     private readonly SettingsService _settingsService;
     private readonly IStorageProvider? _storageProvider;
     private readonly Action? _onSaved;
@@ -25,7 +27,7 @@ public partial class AISettingsViewModel : ViewModelBase
     private bool _isEditing;
 
     [ObservableProperty]
-    private string _editPanelTitle = "添加新模型";
+    private string _editPanelTitle = string.Empty;
 
     [ObservableProperty]
     private string _editingName = string.Empty;
@@ -68,6 +70,24 @@ public partial class AISettingsViewModel : ViewModelBase
 
     public bool IsAzureConfig => EditingProvider == AIProvider.AzureOpenAI;
 
+    public string AISettingsTitle => S.AISettingsTitle;
+    public string AIModelConfig => S.AIModelConfig;
+    public string AIConfiguredModels => S.AIConfiguredModels;
+    public string AIAddModel => S.AIAddModel;
+    public string AIEditModel => S.AIEditModel;
+    public string AIDeleteModel => S.AIDeleteModel;
+    public string AIModelName => S.AIModelName;
+    public string AIServiceType => S.AIServiceType;
+    public string AIModelId => S.AIModelId;
+    public string AIAdvancedOptions => S.AIAdvancedOptions;
+    public string AIConversationStorage => S.AIConversationStorage;
+    public string AIBrowse => S.AIBrowse;
+    public string AIClose => S.AIClose;
+    public string AIEndpoint => S.AIEndpoint;
+    public string AIDeploymentName => S.AIDeploymentName;
+    public string SaveButton => S.SaveButton;
+    public string CancelButton => S.CancelButton;
+
     public AISettingsViewModel() : this(new SettingsService(), null, null)
     {
     }
@@ -107,7 +127,7 @@ public partial class AISettingsViewModel : ViewModelBase
     [RelayCommand]
     private void AddModel()
     {
-        EditPanelTitle = "添加新模型";
+        EditPanelTitle = S.AIAddModel;
         EditingModelIdOriginal = null;
         EditingName = "新模型";
         EditingProvider = AIProvider.Custom;
@@ -126,7 +146,7 @@ public partial class AISettingsViewModel : ViewModelBase
     {
         if (config == null) return;
 
-        EditPanelTitle = "编辑模型";
+        EditPanelTitle = S.AIEditModel;
         EditingModelIdOriginal = config.Id;
         EditingName = config.Name;
         EditingProvider = config.Provider;

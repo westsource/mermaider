@@ -24,10 +24,10 @@
 
     <Grid RowDefinitions="Auto,*,Auto">
         <Menu Grid.Row="0">
-            <MenuItem Header="文件(_F)">
-                <MenuItem Header="新建(_N)" InputGesture="Ctrl+N" Command="{Binding NewFileCommand}"/>
-                <MenuItem Header="打开(_O)..." InputGesture="Ctrl+O" Command="{Binding OpenFileCommand}"/>
-                <MenuItem Header="最近打开(_R)" IsEnabled="{Binding HasRecentFiles}"
+            <MenuItem Header="{Binding MenuFile}">
+                <MenuItem Header="{Binding MenuNew}" InputGesture="Ctrl+N" Command="{Binding NewFileCommand}"/>
+                <MenuItem Header="{Binding MenuOpen}" InputGesture="Ctrl+O" Command="{Binding OpenFileCommand}"/>
+                <MenuItem Header="{Binding MenuRecentFiles}" IsEnabled="{Binding HasRecentFiles}"
                           ItemsSource="{Binding RecentFiles}">
                     <MenuItem.ItemTemplate>
                         <DataTemplate x:DataType="models:RecentFileItem">
@@ -39,28 +39,39 @@
                     </MenuItem.ItemTemplate>
                 </MenuItem>
                 <Separator/>
-                <MenuItem Header="保存(_S)" InputGesture="Ctrl+S" Command="{Binding SaveFileCommand}"/>
-                <MenuItem Header="另存为(_A)..." InputGesture="Ctrl+Shift+S" Command="{Binding SaveFileAsCommand}"/>
+                <MenuItem Header="{Binding MenuSave}" InputGesture="Ctrl+S" Command="{Binding SaveFileCommand}"/>
+                <MenuItem Header="{Binding MenuSaveAs}" InputGesture="Ctrl+Shift+S" Command="{Binding SaveFileAsCommand}"/>
                 <Separator/>
-                <MenuItem Header="关闭当前标签(_W)" InputGesture="Ctrl+W" Command="{Binding CloseCurrentTabCommand}"/>
+                <MenuItem Header="{Binding MenuCloseTab}" InputGesture="Ctrl+W" Command="{Binding CloseCurrentTabCommand}"/>
                 <Separator/>
-                <MenuItem Header="AI 设置(_I)..." Command="{Binding OpenAISettingsCommand}"/>
+                <MenuItem Header="{Binding MenuSettings}">
+                    <MenuItem Header="{Binding MenuAISettings}" Command="{Binding OpenAISettingsCommand}"/>
+                    <MenuItem Header="{Binding LanguageMenu}" ItemsSource="{Binding AvailableLanguages}">
+                        <MenuItem.ItemTemplate>
+                            <DataTemplate>
+                                <MenuItem Header="{Binding Value.NativeName}"
+                                          Command="{Binding #root.DataContext.SetLanguageCommand}"
+                                          CommandParameter="{Binding Key}"/>
+                            </DataTemplate>
+                        </MenuItem.ItemTemplate>
+                    </MenuItem>
+                </MenuItem>
                 <Separator/>
-                <MenuItem Header="退出(_X)" InputGesture="Ctrl+Q" Command="{Binding ExitCommand}"/>
+                <MenuItem Header="{Binding MenuExit}" InputGesture="Ctrl+Q" Command="{Binding ExitCommand}"/>
             </MenuItem>
-            <MenuItem Header="编辑(_E)">
-                <MenuItem Header="撤销(_U)" InputGesture="Ctrl+Z" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndoAction}"/>
-                <MenuItem Header="重做(_R)" InputGesture="Ctrl+Y" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedoAction}"/>
+            <MenuItem Header="{Binding MenuEdit}">
+                <MenuItem Header="{Binding MenuUndo}" InputGesture="Ctrl+Z" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndoAction}"/>
+                <MenuItem Header="{Binding MenuRedo}" InputGesture="Ctrl+Y" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedoAction}"/>
                 <Separator/>
-                <MenuItem Header="剪切(_X)" InputGesture="Ctrl+X" Command="{Binding CutCommand}" IsEnabled="{Binding CanCutAction}"/>
-                <MenuItem Header="复制(_C)" InputGesture="Ctrl+C" Command="{Binding CopyCommand}" IsEnabled="{Binding CanCopyAction}"/>
-                <MenuItem Header="粘贴(_V)" InputGesture="Ctrl+V" Command="{Binding PasteCommand}" IsEnabled="{Binding CanPasteAction}"/>
-                <MenuItem Header="全选(_A)" InputGesture="Ctrl+A" Command="{Binding SelectAllCommand}" IsEnabled="{Binding CanSelectAllAction}"/>
+                <MenuItem Header="{Binding MenuCut}" InputGesture="Ctrl+X" Command="{Binding CutCommand}" IsEnabled="{Binding CanCutAction}"/>
+                <MenuItem Header="{Binding MenuCopy}" InputGesture="Ctrl+C" Command="{Binding CopyCommand}" IsEnabled="{Binding CanCopyAction}"/>
+                <MenuItem Header="{Binding MenuPaste}" InputGesture="Ctrl+V" Command="{Binding PasteCommand}" IsEnabled="{Binding CanPasteAction}"/>
+                <MenuItem Header="{Binding MenuSelectAll}" InputGesture="Ctrl+A" Command="{Binding SelectAllCommand}" IsEnabled="{Binding CanSelectAllAction}"/>
             </MenuItem>
-            <MenuItem Header="帮助(_H)">
-                <MenuItem Header="Mermaid 规范(_M)..." Command="{Binding OpenMermaidDocsCommand}"/>
+            <MenuItem Header="{Binding MenuHelp}">
+                <MenuItem Header="{Binding MenuMermaidDocs}" Command="{Binding OpenMermaidDocsCommand}"/>
                 <Separator/>
-                <MenuItem Header="关于(_A)..." Command="{Binding AboutCommand}"/>
+                <MenuItem Header="{Binding MenuAbout}" Command="{Binding AboutCommand}"/>
             </MenuItem>
         </Menu>
 
@@ -112,7 +123,7 @@
                             HorizontalContentAlignment="Center"
                             VerticalContentAlignment="Center"
                             Command="{Binding AddNewTabCommand}"
-                            ToolTip.Tip="新建标签页 (Ctrl+N)"/>
+                            ToolTip.Tip="{Binding NewTabTooltip}"/>
                 </StackPanel>
             </Border>
 
@@ -134,14 +145,14 @@
                                                      VerticalScrollBarVisibility="Auto">
                                 <avaloniaEdit:TextEditor.ContextMenu>
                                     <ContextMenu>
-                                        <MenuItem Header="撤销(_U)" InputGesture="Ctrl+Z" Command="{Binding #root.DataContext.UndoCommand}" IsEnabled="{Binding #root.DataContext.CanUndoAction}"/>
-                                        <MenuItem Header="重做(_R)" InputGesture="Ctrl+Y" Command="{Binding #root.DataContext.RedoCommand}" IsEnabled="{Binding #root.DataContext.CanRedoAction}"/>
+                                        <MenuItem Header="{Binding #root.DataContext.MenuUndo}" InputGesture="Ctrl+Z" Command="{Binding #root.DataContext.UndoCommand}" IsEnabled="{Binding #root.DataContext.CanUndoAction}"/>
+                                        <MenuItem Header="{Binding #root.DataContext.MenuRedo}" InputGesture="Ctrl+Y" Command="{Binding #root.DataContext.RedoCommand}" IsEnabled="{Binding #root.DataContext.CanRedoAction}"/>
                                         <Separator/>
-                                        <MenuItem Header="剪切(_X)" InputGesture="Ctrl+X" Command="{Binding #root.DataContext.CutCommand}" IsEnabled="{Binding #root.DataContext.CanCutAction}"/>
-                                        <MenuItem Header="复制(_C)" InputGesture="Ctrl+C" Command="{Binding #root.DataContext.CopyCommand}" IsEnabled="{Binding #root.DataContext.CanCopyAction}"/>
-                                        <MenuItem Header="粘贴(_V)" InputGesture="Ctrl+V" Command="{Binding #root.DataContext.PasteCommand}" IsEnabled="{Binding #root.DataContext.CanPasteAction}"/>
+                                        <MenuItem Header="{Binding #root.DataContext.MenuCut}" InputGesture="Ctrl+X" Command="{Binding #root.DataContext.CutCommand}" IsEnabled="{Binding #root.DataContext.CanCutAction}"/>
+                                        <MenuItem Header="{Binding #root.DataContext.MenuCopy}" InputGesture="Ctrl+C" Command="{Binding #root.DataContext.CopyCommand}" IsEnabled="{Binding #root.DataContext.CanCopyAction}"/>
+                                        <MenuItem Header="{Binding #root.DataContext.MenuPaste}" InputGesture="Ctrl+V" Command="{Binding #root.DataContext.PasteCommand}" IsEnabled="{Binding #root.DataContext.CanPasteAction}"/>
                                         <Separator/>
-                                        <MenuItem Header="全选(_A)" InputGesture="Ctrl+A" Command="{Binding #root.DataContext.SelectAllCommand}" IsEnabled="{Binding #root.DataContext.CanSelectAllAction}"/>
+                                        <MenuItem Header="{Binding #root.DataContext.MenuSelectAll}" InputGesture="Ctrl+A" Command="{Binding #root.DataContext.SelectAllCommand}" IsEnabled="{Binding #root.DataContext.CanSelectAllAction}"/>
                                     </ContextMenu>
                                 </avaloniaEdit:TextEditor.ContextMenu>
                             </avaloniaEdit:TextEditor>
@@ -234,7 +245,7 @@
                                                 Height="32"
                                                 Padding="0"
                                                 Command="{Binding SaveImageCommand}"
-                                                ToolTip.Tip="保存预览图">
+                                                ToolTip.Tip="{Binding SavePreviewImage}">
                                             <Path Width="15"
                                                   Height="15"
                                                   Stretch="Uniform"
@@ -245,7 +256,7 @@
                                                 Height="32"
                                                 Padding="0"
                                                 Command="{Binding CopyImageCommand}"
-                                                ToolTip.Tip="复制预览图">
+                                                ToolTip.Tip="{Binding CopyPreviewImage}">
                                             <Path Width="15"
                                                   Height="15"
                                                   Stretch="Uniform"

@@ -4,14 +4,17 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Mermaider.Services.Localization;
 
 namespace Mermaider.Views;
 
 public sealed class AboutDialog : Window
 {
+    private static readonly Strings S = Strings.Instance;
+
     public AboutDialog(string appName, string features, string author, string version)
     {
-        Title = "关于";
+        Title = S.AboutTitle;
         Width = 460;
         Height = 300;
         CanResize = false;
@@ -30,9 +33,9 @@ public sealed class AboutDialog : Window
                     FontSize = 24,
                     FontWeight = FontWeight.SemiBold
                 },
-                CreateInfoLine("功能", features),
-                CreateInfoLine("作者", author),
-                CreateInfoLine("版本", version),
+                CreateInfoLine(S.AboutFeatures, features),
+                CreateInfoLine(S.AboutAuthor, author),
+                CreateInfoLine(S.AboutVersion, version),
                 new StackPanel
                 {
                     Orientation = Orientation.Horizontal,
@@ -40,7 +43,7 @@ public sealed class AboutDialog : Window
                     Margin = new Thickness(0, 8, 0, 0),
                     Children =
                     {
-                        CreateButton("确定", (_, _) => Close())
+                        CreateButton(S.AboutOK, (_, _) => Close())
                     }
                 }
             }

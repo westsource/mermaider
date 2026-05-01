@@ -25,6 +25,8 @@ public class AppSettings
     public AIProviderConfig OpenAIConfig { get; set; } = new() { Provider = AIProvider.OpenAI, Model = "gpt-4o" };
     public AIProviderConfig AzureOpenAIConfig { get; set; } = new() { Provider = AIProvider.AzureOpenAI, Model = "gpt-4" };
     public AIProviderConfig OllamaConfig { get; set; } = new() { Provider = AIProvider.Ollama, Model = "llama3", BaseUrl = "http://localhost:11434" };
+
+    public string? Language { get; set; }
 }
 
 public class SettingsService
@@ -44,6 +46,17 @@ public class SettingsService
     );
 
     public AppSettings Settings { get; private set; }
+
+    public string? GetLanguageCode()
+    {
+        return Settings.Language;
+    }
+
+    public void SetLanguageCode(string languageCode)
+    {
+        Settings.Language = languageCode;
+        Save();
+    }
 
     public SettingsService()
     {

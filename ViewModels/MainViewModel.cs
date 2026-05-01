@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -19,6 +20,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Mermaider.Models;
 using Mermaider.Services;
+using Mermaider.Services.Localization;
 using Mermaider.Views;
 using Window = Avalonia.Controls.Window;
 
@@ -37,6 +39,8 @@ public partial class MainViewModel : ViewModelBase
     private readonly object _renderLock = new();
     private CancellationTokenSource? _renderCancellationTokenSource;
     private long _renderGeneration;
+
+    private static readonly Strings S = Strings.Instance;
 
     public static readonly IValueConverter TabBackgroundConverter = new FuncValueConverter<bool, IBrush>(
         isSelected => isSelected ? new SolidColorBrush(Color.Parse("#FFFFFF")) : new SolidColorBrush(Color.Parse("#E8E8E8"))
@@ -71,7 +75,7 @@ public partial class MainViewModel : ViewModelBase
     private bool _isRendering;
 
     [ObservableProperty]
-    private string _statusMessage = "就绪";
+    private string _statusMessage = Strings.Instance.Ready;
 
     [ObservableProperty]
     private string _currentPreviewHtml = BuildPreviewHtml(string.Empty);
@@ -89,7 +93,88 @@ public partial class MainViewModel : ViewModelBase
         return "1.0.0.0";
     }
 
-    public string WindowTitle => $"Mermaider v{AppVersion} - Mermaid 图表编辑器";
+    public string WindowTitle => $"Mermaider v{AppVersion} - {S.AppTitle.Split('-').Last().Trim()}";
+
+    public string MenuFile => S.MenuFile;
+    public string MenuNew => S.MenuNew;
+    public string MenuOpen => S.MenuOpen;
+    public string MenuRecentFiles => S.MenuRecentFiles;
+    public string MenuSave => S.MenuSave;
+    public string MenuSaveAs => S.MenuSaveAs;
+    public string MenuCloseTab => S.MenuCloseTab;
+    public string MenuAISettings => S.MenuAISettings;
+    public string MenuExit => S.MenuExit;
+    public string MenuEdit => S.MenuEdit;
+    public string MenuUndo => S.MenuUndo;
+    public string MenuRedo => S.MenuRedo;
+    public string MenuCut => S.MenuCut;
+    public string MenuCopy => S.MenuCopy;
+    public string MenuPaste => S.MenuPaste;
+    public string MenuSelectAll => S.MenuSelectAll;
+    public string MenuHelp => S.MenuHelp;
+    public string MenuMermaidDocs => S.MenuMermaidDocs;
+    public string MenuAbout => S.MenuAbout;
+    public string MenuSettings => S.MenuSettings;
+    public string SavePreviewImage => S.SavePreviewImage;
+    public string CopyPreviewImage => S.CopyPreviewImage;
+    public string NewTabTooltip => S.NewTabTooltip;
+    public string LanguageMenu => S.LanguageMenu;
+
+    public IReadOnlyDictionary<string, LanguageInfo> AvailableLanguages => LocalizationService.Instance.AvailableLanguages;
+
+    public string CurrentLanguageCode
+    {
+        get => LocalizationService.Instance.CurrentLanguageCode;
+        set
+        {
+            if (LocalizationService.Instance.CurrentLanguageCode != value)
+            {
+                LocalizationService.Instance.CurrentLanguageCode = value;
+                _settingsService.SetLanguageCode(value);
+                OnLanguageChanged();
+            }
+        }
+    }
+
+    private void OnLanguageChanged()
+    {
+        OnPropertyChanged(nameof(CurrentLanguageCode));
+        OnPropertyChanged(nameof(WindowTitle));
+        OnPropertyChanged(nameof(ZoomText));
+        OnPropertyChanged(nameof(MenuFile));
+        OnPropertyChanged(nameof(MenuNew));
+        OnPropertyChanged(nameof(MenuOpen));
+        OnPropertyChanged(nameof(MenuRecentFiles));
+        OnPropertyChanged(nameof(MenuSave));
+        OnPropertyChanged(nameof(MenuSaveAs));
+        OnPropertyChanged(nameof(MenuCloseTab));
+        OnPropertyChanged(nameof(MenuAISettings));
+        OnPropertyChanged(nameof(MenuExit));
+        OnPropertyChanged(nameof(MenuEdit));
+        OnPropertyChanged(nameof(MenuUndo));
+        OnPropertyChanged(nameof(MenuRedo));
+        OnPropertyChanged(nameof(MenuCut));
+        OnPropertyChanged(nameof(MenuCopy));
+        OnPropertyChanged(nameof(MenuPaste));
+        OnPropertyChanged(nameof(MenuSelectAll));
+        OnPropertyChanged(nameof(MenuHelp));
+        OnPropertyChanged(nameof(MenuMermaidDocs));
+        OnPropertyChanged(nameof(MenuAbout));
+        OnPropertyChanged(nameof(MenuSettings));
+        OnPropertyChanged(nameof(SavePreviewImage));
+        OnPropertyChanged(nameof(CopyPreviewImage));
+        OnPropertyChanged(nameof(NewTabTooltip));
+        OnPropertyChanged(nameof(LanguageMenu));
+        OnPropertyChanged(nameof(AvailableLanguages));
+
+        AiAssistant?.RefreshLocalization();
+    }
+
+    [RelayCommand]
+    private void SetLanguage(string languageCode)
+    {
+        CurrentLanguageCode = languageCode;
+    }
 
     private const double MinZoom = 1.0;
     private const double MaxZoom = 5.0;
@@ -123,7 +208,7 @@ public partial class MainViewModel : ViewModelBase
 
     public bool HasRecentFiles => RecentFiles.Count > 0;
 
-    public string ZoomText => $"缩放: {(int)(PreviewDisplayScale * 100)}%";
+    public string ZoomText => string.Format(S.ZoomFormat, (int)(PreviewDisplayScale * 100));
 
     public double PreviewDisplayScale => PreviewZoom * PreviewFitScale;
 
@@ -217,7 +302,7 @@ public partial class MainViewModel : ViewModelBase
         if (CurrentTab != null)
         {
             CurrentTab.Content = code;
-            StatusMessage = "AI 生成的代码已应用";
+            StatusMessage = S.AICodeApplied;
         }
     }
 
@@ -249,7 +334,7 @@ public partial class MainViewModel : ViewModelBase
     {
         var tab = new TabItem
         {
-            Header = "未命名.mmd",
+            Header = S.NewTabTitle,
             Content = GetDefaultMermaidCode()
         };
         tab.ContentChanged += OnTabContentChanged;
@@ -328,7 +413,7 @@ public partial class MainViewModel : ViewModelBase
             tab.HasError = false;
             tab.ErrorMessage = null;
             CurrentPreviewHtml = tab.WebPreviewHtml;
-            StatusMessage = "就绪";
+            StatusMessage = S.Ready;
             return;
         }
 
@@ -336,7 +421,7 @@ public partial class MainViewModel : ViewModelBase
         var generation = Interlocked.Increment(ref _renderGeneration);
         var cancellationToken = ReplaceRenderCancellationTokenSource().Token;
 
-        StatusMessage = "正在渲染预览...";
+        StatusMessage = S.Rendering;
         IsRendering = true;
 
         try
@@ -352,7 +437,7 @@ public partial class MainViewModel : ViewModelBase
             tab.ErrorMessage = null;
             tab.WebPreviewHtml = BuildPreviewHtml(contentSnapshot);
             CurrentPreviewHtml = tab.WebPreviewHtml;
-            StatusMessage = "预览已更新";
+            StatusMessage = S.PreviewUpdated;
         }
         catch (OperationCanceledException)
         {
@@ -365,7 +450,7 @@ public partial class MainViewModel : ViewModelBase
             tab.ErrorMessage = shortError;
             tab.WebPreviewHtml = BuildErrorPreviewHtml(shortError);
             CurrentPreviewHtml = tab.WebPreviewHtml;
-            StatusMessage = $"错误: {shortError}";
+            StatusMessage = string.Format(S.ErrorFormat, shortError);
         }
         finally
         {
@@ -408,7 +493,7 @@ public partial class MainViewModel : ViewModelBase
     {
         if (string.IsNullOrWhiteSpace(rawError))
         {
-            return "未知错误";
+            return S.UnknownError;
         }
 
         var lines = rawError
@@ -419,7 +504,7 @@ public partial class MainViewModel : ViewModelBase
 
         if (lines.Length == 0)
         {
-            return "未知错误";
+            return S.UnknownError;
         }
 
         var candidate = lines.FirstOrDefault(line =>
@@ -454,7 +539,7 @@ public partial class MainViewModel : ViewModelBase
             var shortError = BuildUserFriendlyError(result.ErrorMessage);
             tab.HasError = true;
             tab.ErrorMessage = shortError;
-            StatusMessage = $"语法错误: {shortError}";
+            StatusMessage = string.Format(S.SyntaxErrorFormat, shortError);
             return null;
         }
 
@@ -482,7 +567,7 @@ public partial class MainViewModel : ViewModelBase
 
         tab.IsModified = false;
         tab.UpdateHeader();
-        StatusMessage = "已保存";
+        StatusMessage = S.Saved;
         return true;
     }
 
@@ -519,7 +604,7 @@ public partial class MainViewModel : ViewModelBase
 
         if (!await ConfirmCloseTabAsync(tab))
         {
-            StatusMessage = "已取消关闭";
+            StatusMessage = S.Cancelled;
             return;
         }
 
@@ -572,7 +657,7 @@ public partial class MainViewModel : ViewModelBase
         {
             if (TrySelectExistingTabByPath(filePath))
             {
-                StatusMessage = "文件已打开，已切换到对应标签页";
+                StatusMessage = S.FileAlreadyOpen;
                 return;
             }
 
@@ -597,7 +682,7 @@ public partial class MainViewModel : ViewModelBase
     {
         if (TrySelectExistingTabByPath(filePath))
         {
-            StatusMessage = "文件已打开，已切换到对应标签页";
+            StatusMessage = S.FileAlreadyOpen;
             return;
         }
 
@@ -627,7 +712,7 @@ public partial class MainViewModel : ViewModelBase
         if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
         {
             RemoveFromRecentFiles(filePath);
-            StatusMessage = "文件不存在或已被删除";
+            StatusMessage = S.FileNotFound;
             return;
         }
 
@@ -692,7 +777,7 @@ public partial class MainViewModel : ViewModelBase
         CurrentTab.IsModified = false;
         CurrentTab.UpdateHeader();
         AddToRecentFiles(filePath);
-        StatusMessage = "已保存";
+        StatusMessage = S.Saved;
     }
 
     private bool TrySelectExistingTabByPath(string? filePath)
@@ -762,7 +847,7 @@ public partial class MainViewModel : ViewModelBase
         var clipboard = _ownerWindow.Clipboard;
         if (clipboard == null)
         {
-            StatusMessage = "当前环境不支持剪贴板";
+            StatusMessage = S.ClipboardNotSupported;
             return;
         }
 
@@ -771,7 +856,7 @@ public partial class MainViewModel : ViewModelBase
         dataObject.Set("PNG", pngBytes);
 
         await clipboard.SetDataObjectAsync(dataObject);
-        StatusMessage = "图片已复制到剪贴板";
+        StatusMessage = S.ImageCopied;
     }
 
     [RelayCommand]
@@ -789,7 +874,7 @@ public partial class MainViewModel : ViewModelBase
         var result = await _fileService.SaveImageAsync(imageData, fileName);
         if (result != null)
         {
-            StatusMessage = "图片已保存";
+            StatusMessage = S.ImageSaved;
         }
     }
 
@@ -797,21 +882,21 @@ public partial class MainViewModel : ViewModelBase
     private void ZoomIn()
     {
         PreviewZoom = Math.Min(PreviewZoom + ZoomStep, MaxZoom);
-        StatusMessage = $"缩放: {(int)(PreviewZoom * 100)}%";
+        StatusMessage = string.Format(S.ZoomFormat, (int)(PreviewZoom * 100));
     }
 
     [RelayCommand]
     private void ZoomOut()
     {
         PreviewZoom = Math.Max(PreviewZoom - ZoomStep, MinZoom);
-        StatusMessage = $"缩放: {(int)(PreviewZoom * 100)}%";
+        StatusMessage = string.Format(S.ZoomFormat, (int)(PreviewZoom * 100));
     }
 
     [RelayCommand]
     private void ResetZoom()
     {
         PreviewZoom = 1.0;
-        StatusMessage = "缩放已重置";
+        StatusMessage = S.ZoomReset;
     }
 
     [RelayCommand]
@@ -943,7 +1028,7 @@ public partial class MainViewModel : ViewModelBase
         }
         catch
         {
-            StatusMessage = "无法打开 Mermaid 文档链接";
+            StatusMessage = S.CannotOpenLink;
         }
     }
 

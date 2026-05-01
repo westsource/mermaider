@@ -8,6 +8,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using AvaloniaWebView;
 using Mermaider.Services;
+using Mermaider.Services.Localization;
 using Mermaider.ViewModels;
 using Mermaider.Views;
 
@@ -32,6 +33,9 @@ public class App : Application
         {
             var mermaidService = new MermaidService();
             var settingsService = new SettingsService();
+            
+            LocalizationService.Initialize(settingsService.GetLanguageCode());
+
             var fileService = new FileService();
 
             var mainWindow = new MainWindow();
