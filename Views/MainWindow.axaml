@@ -264,6 +264,7 @@
         <Border Grid.Row="2" Background="#F0F0F0" BorderBrush="#CCCCCC" BorderThickness="0,1,0,0" Padding="5,2">
             <Grid ColumnDefinitions="Auto,*,Auto">
                 <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" Foreground="#666666" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="2" Text="{Binding ZoomText}" Foreground="#666666" VerticalAlignment="Center" Margin="10,0,0,0"/>
             </Grid>
         </Border>
     </Grid>

@@ -42,6 +42,7 @@ public partial class MainWindow : Window
     private bool _webViewAttached;
     private bool _webViewInitTried;
     private bool _webViewPageLoaded;
+    private DispatcherTimer? _zoomPollTimer;
     private bool _isClosing;
 
     private bool _isDraggingSplitter;
@@ -755,12 +756,53 @@ public partial class MainWindow : Window
         _previewHtmlPath = Path.Combine(_previewTempDir, "preview.html");
     }
 
+    private void StartZoomPolling()
+    {
+        if (_zoomPollTimer != null)
+            return;
+
+        _zoomPollTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+        _zoomPollTimer.Tick += async (_, _) =>
+        {
+            if (_previewWebViewControl == null || _webViewExecuteScriptMethod == null)
+                return;
+
+            try
+            {
+                var taskResult = _webViewExecuteScriptMethod.Invoke(_previewWebViewControl, new object[] { "scale" });
+                string? value = null;
+                if (taskResult is Task<string> typedTask)
+                {
+                    value = await typedTask;
+                }
+                else if (taskResult is Task task)
+                {
+                    await task;
+                    value = task.GetType().GetProperty("Result")?.GetValue(task)?.ToString();
+                }
+
+                if (!string.IsNullOrEmpty(value) &&
+                    double.TryParse(value, System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out var scale) &&
+                    DataContext is MainViewModel vm)
+                {
+                    vm.PreviewZoom = scale;
+                }
+            }
+            catch
+            {
+            }
+        };
+        _zoomPollTimer.Start();
+    }
+
     private bool EnsureWebViewReady()
     {
         if (_previewWebHost?.Child is WebView existingWebView)
         {
             _previewWebViewControl = existingWebView;
             _webViewAttached = true;
+            StartZoomPolling();
             return true;
         }
 
@@ -844,6 +886,7 @@ public partial class MainWindow : Window
             webViewControl.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
             _previewWebHost.Child = webViewControl;
             _previewWebViewControl = webViewControl;
+            StartZoomPolling();
             return true;
         }
         catch
