@@ -4,6 +4,7 @@ sequenceDiagram
     participant S as Services
     participant MW as MainWindow
     participant VM as MainViewModel
+    participant AI as AIPanelViewModel
     participant T as TabItem
 
     P->>P: 注册异常处理器
@@ -22,12 +23,19 @@ sequenceDiagram
     end
     
     A->>MW: new MainWindow()
+    Note over MW: CleanupStalePreviewFiles()
+    Note over MW: 清理过期预览文件
+    MW->>MW: InitializeComponent()
+    MW->>MW: AttachPreviewHandlers()
+    
     A->>VM: new MainViewModel(...)
     
     rect rgb(255, 250, 240)
         Note over VM: MainViewModel 构造函数
         VM->>VM: 加载用户设置
         VM->>VM: 加载最近文件列表
+        VM->>VM: new AIConversationService()
+        VM->>AI: InitializeAIPanelViewModel()
         VM->>T: AddNewTab()
         Note over T: 创建默认标签页<br/>Content = string.Empty
         T->>VM: 触发 ContentChanged
@@ -45,6 +53,10 @@ sequenceDiagram
     alt 命令行参数包含文件路径
         A->>VM: OpenFileFromPath(args[1])
         VM->>VM: 读取并渲染文件内容
+    else 无命令行参数
+        A->>A: Task.Delay(1000)
+        A->>VM: SetInitialContent()
+        Note over VM: 设置默认示例代码
     end
     
     A->>MW: desktop.MainWindow = mainWindow

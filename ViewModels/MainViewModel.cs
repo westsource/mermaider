@@ -1093,7 +1093,7 @@ public partial class MainViewModel : ViewModelBase
     let lastX = 0;
     let lastY = 0;
     const minScale = 0.2;
-    const maxScale = 6;
+    const maxScale = 30;
 
     function applyTransform() {
       target.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
