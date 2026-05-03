@@ -1152,7 +1152,7 @@ public partial class MainViewModel : ViewModelBase
         var dialog = new AboutDialog(
             "Mermaider",
             "本地 Mermaid 图表编辑器。支持代码编辑、语法高亮、实时预览、缩放拖拽、语法检测、图片导出；集成 AI 助手，可通过自然语言生成图表；支持多标签页多文件编辑；本地渲染，数据不上传。",
-            "黄超（道荣）",
+            "道荣（黄超）",
             AppVersion
         );
 

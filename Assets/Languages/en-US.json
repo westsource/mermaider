@@ -114,6 +114,7 @@
   "LatestVersion": "Latest Version",
   "ReleaseNotes": "Release Notes",
   "DownloadUpdate": "Download",
+  "DownloadInBrowser": "Download in Browser",
   "DownloadingUpdate": "Downloading...",
   "DownloadComplete": "Download Complete!",
   "DownloadCompleteMessage": "Update package saved to:\n{0}\n\nPlease close the application, extract the ZIP file, and replace the existing application files manually.",

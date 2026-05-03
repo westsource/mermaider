@@ -117,6 +117,7 @@ public class Strings
     public string LatestVersion => Get("LatestVersion");
     public string ReleaseNotes => Get("ReleaseNotes");
     public string DownloadUpdate => Get("DownloadUpdate");
+    public string DownloadInBrowser => Get("DownloadInBrowser");
     public string DownloadingUpdate => Get("DownloadingUpdate");
     public string DownloadComplete => Get("DownloadComplete");
     public string DownloadCompleteMessage => Get("DownloadCompleteMessage");

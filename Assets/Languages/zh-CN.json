@@ -114,6 +114,7 @@
   "LatestVersion": "最新版本",
   "ReleaseNotes": "更新说明",
   "DownloadUpdate": "下载",
+  "DownloadInBrowser": "使用默认浏览器下载",
   "DownloadingUpdate": "正在下载...",
   "DownloadComplete": "下载完成！",
   "DownloadCompleteMessage": "更新包已保存至：\n{0}\n\n请关闭应用，解压 ZIP 文件并手动替换现有应用文件。",
