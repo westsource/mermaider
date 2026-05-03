@@ -2,6 +2,12 @@
 
 A local Mermaid diagram editor built with C# Avalonia, featuring code editing, syntax highlighting, real-time preview with zoom/pan, syntax validation, image export and copy, and an AI assistant for generating diagrams via natural language. All rendering is done locally — no data uploaded.
 
+## Screenshots
+
+![Main Interface](screenshots/Mermaider_NELcF3ITQN.png)
+
+![AI Assistant](screenshots/Mermaider_fxJXInfYWk.png)
+
 ## Features
 
 ### Code Editing

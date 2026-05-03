@@ -4,9 +4,9 @@
 
 ## 界面截图
 
-![主界面](Mermaider_NELcF3ITQN.png)
+![主界面](screenshots/Mermaider_NELcF3ITQN.png)
 
-![AI助手](Mermaider_fxJXInfYWk.png)
+![AI助手](screenshots/Mermaider_fxJXInfYWk.png)
 
 ## 功能特性
 

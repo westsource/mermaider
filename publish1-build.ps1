@@ -161,7 +161,7 @@ if (Test-Path $ZipFilePath) {
     $PublishSize = (Get-ChildItem -Path $PublishPath -Recurse -File | Measure-Object -Property Length -Sum).Sum
     $PublishSizeMB = [math]::Round($PublishSize / 1MB, 2)
     
-    $ManifestPath = Join-Path $DistPath "update-manifest.json"
+    $ManifestPath = Join-Path $ProjectPath "update-manifest.json"
     $DownloadUrl = if ([string]::IsNullOrWhiteSpace($ManifestUrlPrefix)) { "" } else { "$ManifestUrlPrefix/$ZipFileName" }
     $Manifest = @{
         version      = $Version
