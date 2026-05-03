@@ -11,7 +11,7 @@ namespace Mermaider.Services;
 
 public class UpdateService : IUpdateService
 {
-    private const string DefaultManifestUrl = "https://gitee.com/westsource/mermaider/raw/main/update-manifest.json";
+    private const string DefaultManifestUrl = "https://gitee.com/westsource/mermaider/raw/master/update-manifest.json";
 
     private readonly HttpClient _httpClient;
     private readonly SettingsService _settingsService;
