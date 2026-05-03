@@ -107,6 +107,22 @@ public class Strings
 
     public string LanguageMenu => Get("LanguageMenu");
 
+    public string MenuCheckUpdate => Get("MenuCheckUpdate");
+    public string CheckUpdate => Get("CheckUpdate");
+    public string CheckingUpdate => Get("CheckingUpdate");
+    public string UpdateAvailable => Get("UpdateAvailable");
+    public string UpdateNotAvailable => Get("UpdateNotAvailable");
+    public string CheckUpdateFailed => Get("CheckUpdateFailed");
+    public string CurrentVersion => Get("CurrentVersion");
+    public string LatestVersion => Get("LatestVersion");
+    public string ReleaseNotes => Get("ReleaseNotes");
+    public string DownloadUpdate => Get("DownloadUpdate");
+    public string DownloadingUpdate => Get("DownloadingUpdate");
+    public string DownloadComplete => Get("DownloadComplete");
+    public string DownloadCompleteMessage => Get("DownloadCompleteMessage");
+    public string SkipVersion => Get("SkipVersion");
+    public string RemindLater => Get("RemindLater");
+
     public string Get(string key)
     {
         return LocalizationService.Instance.GetString(key);

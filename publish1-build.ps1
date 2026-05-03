@@ -2,7 +2,8 @@ param(
     [string]$Runtime = "win-x64",
     [switch]$Run,
     [switch]$English,
-    [string]$Version
+    [string]$Version,
+    [string]$ManifestUrlPrefix = ""
 )
 
 $null = chcp 65001
@@ -160,12 +161,26 @@ if (Test-Path $ZipFilePath) {
     $PublishSize = (Get-ChildItem -Path $PublishPath -Recurse -File | Measure-Object -Property Length -Sum).Sum
     $PublishSizeMB = [math]::Round($PublishSize / 1MB, 2)
     
+    $ManifestPath = Join-Path $DistPath "update-manifest.json"
+    $DownloadUrl = if ([string]::IsNullOrWhiteSpace($ManifestUrlPrefix)) { "" } else { "$ManifestUrlPrefix/$ZipFileName" }
+    $Manifest = @{
+        version      = $Version
+        downloadUrl  = $DownloadUrl
+        releaseNotes = ""
+        zipFileName  = $ZipFileName
+        zipFileSize  = $ZipInfo.Length
+        publishedAt  = (Get-Date -Format "o")
+    }
+    $ManifestJson = $Manifest | ConvertTo-Json
+    Set-Content -Path $ManifestPath -Value $ManifestJson -Encoding UTF8
+
     if ($English) {
         Write-Host "`nBuild succeeded!" -ForegroundColor Green
         Write-Host "Version: $Version" -ForegroundColor Yellow
         Write-Host "ZIP path: $ZipFilePath" -ForegroundColor Yellow
         Write-Host "ZIP size: $SizeMB MB" -ForegroundColor Yellow
         Write-Host "Extracted size: $PublishSizeMB MB" -ForegroundColor Gray
+        Write-Host "Manifest: $ManifestPath" -ForegroundColor Gray
         
         if ($Run) {
             Write-Host "`nLaunching application..." -ForegroundColor Cyan
@@ -177,6 +192,7 @@ if (Test-Path $ZipFilePath) {
         Write-Host "ZIP路径: $ZipFilePath" -ForegroundColor Yellow
         Write-Host "ZIP大小: $SizeMB MB" -ForegroundColor Yellow
         Write-Host "解压后大小: $PublishSizeMB MB" -ForegroundColor Gray
+        Write-Host "清单文件: $ManifestPath" -ForegroundColor Gray
         
         if ($Run) {
             Write-Host "`n启动程序..." -ForegroundColor Cyan

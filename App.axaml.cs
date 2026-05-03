@@ -33,16 +33,18 @@ public class App : Application
         {
             var mermaidService = new MermaidService();
             var settingsService = new SettingsService();
-            
+
             LocalizationService.Initialize(settingsService.GetLanguageCode());
 
             var fileService = new FileService();
+            IUpdateService updateService = new UpdateService(settingsService);
 
             var mainWindow = new MainWindow();
             var viewModel = new MainViewModel(
                 mermaidService,
                 fileService,
                 settingsService,
+                updateService,
                 mainWindow.StorageProvider,
                 mainWindow
             );

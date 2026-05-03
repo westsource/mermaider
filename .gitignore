@@ -33,6 +33,8 @@ bld/
 [Ll]ogs/
 [Dd]ist/
 .build-count
+publish_*.txt
+Avalonia/resources
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/

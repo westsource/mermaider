@@ -27,6 +27,11 @@ public class AppSettings
     public AIProviderConfig OllamaConfig { get; set; } = new() { Provider = AIProvider.Ollama, Model = "llama3", BaseUrl = "http://localhost:11434" };
 
     public string? Language { get; set; }
+
+    public bool AutoCheckUpdate { get; set; } = true;
+    public string? SkipVersion { get; set; }
+    public string? LastUpdateCheckTime { get; set; }
+    public string? UpdateManifestUrl { get; set; }
 }
 
 public class SettingsService

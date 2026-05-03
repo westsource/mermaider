@@ -45,6 +45,7 @@
   "MenuHelp": "_Help",
   "MenuMermaidDocs": "_Mermaid Documentation...",
   "MenuAbout": "_About...",
+  "MenuCheckUpdate": "Check for _Updates...",
   "MenuSettings": "_Settings...",
 
   "AboutTitle": "About",
@@ -102,5 +103,20 @@
   "AIEditPanelTitle": "Edit Model",
   "AIEndpoint": "Endpoint",
   "AIDeploymentName": "Deployment Name",
-  "LanguageMenu": "Language"
+  "LanguageMenu": "Language",
+
+  "CheckUpdate": "Check for Updates",
+  "CheckingUpdate": "Checking for updates...",
+  "UpdateAvailable": "A new version is available",
+  "UpdateNotAvailable": "You already have the latest version",
+  "CheckUpdateFailed": "Failed to check for updates. Please check your network connection.",
+  "CurrentVersion": "Current Version",
+  "LatestVersion": "Latest Version",
+  "ReleaseNotes": "Release Notes",
+  "DownloadUpdate": "Download",
+  "DownloadingUpdate": "Downloading...",
+  "DownloadComplete": "Download Complete!",
+  "DownloadCompleteMessage": "Update package saved to:\n{0}\n\nPlease close the application, extract the ZIP file, and replace the existing application files manually.",
+  "SkipVersion": "Skip this version",
+  "RemindLater": "Remind me later"
 }

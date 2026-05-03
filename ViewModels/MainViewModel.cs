@@ -32,6 +32,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly MermaidService _mermaidService;
     private readonly FileService _fileService;
     private readonly SettingsService _settingsService;
+    private readonly IUpdateService _updateService;
     private readonly IStorageProvider _storageProvider;
     private readonly Window _ownerWindow;
     private readonly AIConversationService _conversationService;
@@ -114,6 +115,7 @@ public partial class MainViewModel : ViewModelBase
     public string MenuSelectAll => S.MenuSelectAll;
     public string MenuHelp => S.MenuHelp;
     public string MenuMermaidDocs => S.MenuMermaidDocs;
+    public string MenuCheckUpdate => S.MenuCheckUpdate;
     public string MenuAbout => S.MenuAbout;
     public string MenuSettings => S.MenuSettings;
     public string SavePreviewImage => S.SavePreviewImage;
@@ -160,6 +162,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(MenuSelectAll));
         OnPropertyChanged(nameof(MenuHelp));
         OnPropertyChanged(nameof(MenuMermaidDocs));
+        OnPropertyChanged(nameof(MenuCheckUpdate));
         OnPropertyChanged(nameof(MenuAbout));
         OnPropertyChanged(nameof(MenuSettings));
         OnPropertyChanged(nameof(SavePreviewImage));
@@ -283,11 +286,12 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(EditorPanelWidth));
     }
 
-    public MainViewModel(MermaidService mermaidService, FileService fileService, SettingsService settingsService, IStorageProvider storageProvider, Window ownerWindow)
+    public MainViewModel(MermaidService mermaidService, FileService fileService, SettingsService settingsService, IUpdateService updateService, IStorageProvider storageProvider, Window ownerWindow)
     {
         _mermaidService = mermaidService;
         _fileService = fileService;
         _settingsService = settingsService;
+        _updateService = updateService;
         _storageProvider = storageProvider;
         _ownerWindow = ownerWindow;
         _fileService.SetStorageProvider(storageProvider);
@@ -308,6 +312,42 @@ public partial class MainViewModel : ViewModelBase
         InitializeAIPanelViewModel();
 
         AddNewTab();
+
+        _ = CheckForUpdateOnStartupAsync();
+    }
+
+    private async Task CheckForUpdateOnStartupAsync()
+    {
+        var settings = _settingsService.Settings;
+        if (!settings.AutoCheckUpdate) return;
+
+        var skipVersion = settings.SkipVersion;
+        if (!string.IsNullOrEmpty(skipVersion) && skipVersion == _updateService.GetCurrentVersion())
+            return;
+
+        var lastCheck = settings.LastUpdateCheckTime;
+        if (!string.IsNullOrEmpty(lastCheck))
+        {
+            if (DateTime.TryParse(lastCheck, out var lastCheckTime))
+            {
+                if ((DateTime.Now - lastCheckTime).TotalHours < 24)
+                    return;
+            }
+        }
+
+        var result = await _updateService.CheckForUpdateAsync();
+        if (result != null && result.HasUpdate && !string.IsNullOrEmpty(result.DownloadUrl))
+        {
+            if (!string.IsNullOrEmpty(skipVersion) && skipVersion == result.LatestVersion)
+                return;
+
+            settings.LastUpdateCheckTime = DateTime.Now.ToString("O");
+            _settingsService.Save();
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                StatusMessage = S.UpdateAvailable;
+            });
+        }
     }
 
     private void InitializeAIPanelViewModel()
@@ -1116,6 +1156,13 @@ public partial class MainViewModel : ViewModelBase
             AppVersion
         );
 
+        _ = dialog.ShowDialog(_ownerWindow);
+    }
+
+    [RelayCommand]
+    private void CheckUpdate()
+    {
+        var dialog = new UpdateDialog(_updateService, _settingsService);
         _ = dialog.ShowDialog(_ownerWindow);
     }
 
