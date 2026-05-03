@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -179,8 +180,28 @@ public partial class MainViewModel : ViewModelBase
     private const double MinZoom = 1.0;
     private const double MaxZoom = 5.0;
     private const double ZoomStep = 0.1;
-    private const double FullPreviewScale = 3.0;
     private const int DebounceMilliseconds = 350;
+
+    private Timer? _bgRenderTimer;
+
+    private static readonly Regex[] NodePatterns =
+    {
+        new(@"\b(\w+)(?=\[\[[^\]]*\]\])", RegexOptions.Compiled),
+        new(@"\b(\w+)(?=>[^\]]*\])",      RegexOptions.Compiled),
+        new(@"\b(\w+)(?=\{\{[^\}]*\}\})", RegexOptions.Compiled),
+        new(@"\b(\w+)(?=\(\([^\)]*\)\))", RegexOptions.Compiled),
+        new(@"\b(\w+)(?=\[[^\]]*\])",     RegexOptions.Compiled),
+        new(@"\b(\w+)(?=\{[^\}]*\})",     RegexOptions.Compiled),
+        new(@"\b(\w+)(?=\([^\)]*\))",     RegexOptions.Compiled),
+    };
+
+    private static readonly Regex EdgePattern = new(
+        @"(?:<==>|<-->|-\.->|-\.-|==>|===|-->|---|--o|--x|<=>|<--|<---|<\.->)",
+        RegexOptions.Compiled);
+
+    private static readonly Regex SubgraphPattern = new(
+        @"\bsubgraph\b",
+        RegexOptions.Compiled);
 
     [ObservableProperty]
     private bool _canUndoAction;
@@ -373,6 +394,7 @@ public partial class MainViewModel : ViewModelBase
         {
             tab.IsModified = true;
             tab.UpdateHeader();
+            tab.CachedPngBytes = null;
             ScheduleValidationAndRender(tab);
         }
     }
@@ -438,6 +460,7 @@ public partial class MainViewModel : ViewModelBase
             tab.WebPreviewHtml = BuildPreviewHtml(contentSnapshot);
             CurrentPreviewHtml = tab.WebPreviewHtml;
             StatusMessage = S.PreviewUpdated;
+            ScheduleBackgroundImageGeneration(tab);
         }
         catch (OperationCanceledException)
         {
@@ -533,7 +556,15 @@ public partial class MainViewModel : ViewModelBase
             return null;
         }
 
-        var result = await _mermaidService.RenderAndValidateAsync(tab.Content, FullPreviewScale);
+        if (tab.CachedPngBytes != null)
+        {
+            return tab.CachedPngBytes;
+        }
+
+        var elementCount = CountDiagramElements(tab.Content);
+        var scale = CalculateScale(elementCount);
+
+        var result = await _mermaidService.RenderAndValidateAsync(tab.Content, scale);
         if (!result.Success || result.ImageData == null)
         {
             var shortError = BuildUserFriendlyError(result.ErrorMessage);
@@ -546,6 +577,80 @@ public partial class MainViewModel : ViewModelBase
         tab.HasError = false;
         tab.ErrorMessage = null;
         return result.ImageData;
+    }
+
+    private static int CountDiagramElements(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code)) return 1;
+
+        code = Regex.Replace(code, @"%%[^\n]*", "");
+
+        var countedIds = new HashSet<string>(StringComparer.Ordinal);
+        var count = 0;
+
+        foreach (var regex in NodePatterns)
+        {
+            foreach (Match match in regex.Matches(code))
+            {
+                if (countedIds.Add(match.Groups[1].Value))
+                    count++;
+            }
+        }
+
+        count += EdgePattern.Matches(code).Count;
+        count += SubgraphPattern.Matches(code).Count;
+
+        return Math.Max(1, count);
+    }
+
+    private static double CalculateScale(int elementCount)
+    {
+        if (elementCount <= 0)  return 1.5;
+        if (elementCount <= 15) return 1.5 + elementCount * (2.0 / 15.0);
+        if (elementCount <= 35) return 3.5 + (elementCount - 15) * (1.5 / 20.0);
+        return 5.0;
+    }
+
+    private void ScheduleBackgroundImageGeneration(TabItem tab)
+    {
+        if (!ReferenceEquals(tab, CurrentTab))
+            return;
+
+        lock (_timerLock)
+        {
+            _bgRenderTimer?.Dispose();
+            _bgRenderTimer = new Timer(async _ =>
+            {
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await GenerateBackgroundImageAsync(tab);
+                });
+            }, null, TimeSpan.FromMilliseconds(800), Timeout.InfiniteTimeSpan);
+        }
+    }
+
+    private async Task GenerateBackgroundImageAsync(TabItem tab)
+    {
+        if (!ReferenceEquals(tab, CurrentTab))
+            return;
+
+        if (string.IsNullOrWhiteSpace(tab.Content))
+            return;
+
+        var contentSnapshot = tab.Content;
+
+        var elementCount = CountDiagramElements(contentSnapshot);
+        var scale = CalculateScale(elementCount);
+
+        var result = await _mermaidService.RenderAndValidateAsync(contentSnapshot, scale);
+
+        if (!result.Success || result.ImageData == null)
+            return;
+
+        if (ReferenceEquals(tab, CurrentTab) && tab.Content == contentSnapshot)
+        {
+            tab.CachedPngBytes = result.ImageData;
+        }
     }
 
     private async Task<bool> SaveTabAsync(TabItem tab)

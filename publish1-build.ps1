@@ -107,6 +107,18 @@ if (Test-Path $ToolsSourcePath) {
     }
 }
 
+# Remove unnecessary .map and .d.ts files from publish output
+$mapFiles = Get-ChildItem -Path $PublishPath -Recurse -Include *.map,*.d.ts -File -ErrorAction SilentlyContinue
+$removedCount = $mapFiles.Count
+$mapFiles | Remove-Item -Force -ErrorAction SilentlyContinue
+if ($removedCount -gt 0) {
+    if ($English) {
+        Write-Host "Cleaned up $removedCount .map/.d.ts files." -ForegroundColor Gray
+    } else {
+        Write-Host "清理了 $removedCount 个 .map/.d.ts 文件" -ForegroundColor Gray
+    }
+}
+
 if (Test-Path $DistPath) {
     Remove-Item -Path $DistPath -Recurse -Force
 }
@@ -123,7 +135,7 @@ if ($English) {
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $ZipArchive = [System.IO.Compression.ZipFile]::Open($ZipFilePath, 'Create')
-$CompressionLevel = [System.IO.Compression.CompressionLevel]::Fastest
+$CompressionLevel = [System.IO.Compression.CompressionLevel]::Optimal
 
 Get-ChildItem -Path $PublishPath -Recurse -File | ForEach-Object {
     $relativePath = $_.FullName.Substring($PublishPath.Length + 1)

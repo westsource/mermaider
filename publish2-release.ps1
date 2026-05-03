@@ -17,7 +17,7 @@ if ($Help) {
     Write-Host @"
 Gitee Release 发布脚本
 
-用法: .\release.ps1 [参数]
+用法: .\publish2-release.ps1 [参数]
 
 参数:
   -Version    版本号 (如: 1.0.260426.0)，不指定则自动从 .csproj 读取
@@ -29,11 +29,11 @@ Gitee Release 发布脚本
   -Help       显示帮助信息
 
 示例:
-  .\release.ps1 -Version 1.0.0 -Token ghp_xxxx
-  .\release.ps1 -Draft
+  .\publish2-release.ps1 -Version 1.0.0 -Token ghp_xxxx
+  .\publish2-release.ps1 -Draft
 
 注意:
-  1. 需要先运行 publish.ps1 生成 dist 目录下的 ZIP 文件
+  1. 需要先运行 publish1-build.ps1 生成 dist 目录下的 ZIP 文件
   2. Token 需要有 projects 权限
   3. 可在 https://gitee.com/profile/personal_access_tokens 创建令牌
 "@
@@ -67,13 +67,13 @@ if ([string]::IsNullOrWhiteSpace($Token)) {
 
 # 检查 dist 目录
 if (-not (Test-Path $DistPath)) {
-    Write-Host "dist 目录不存在，请先运行 publish.ps1 生成发布包" -ForegroundColor Red
+    Write-Host "dist 目录不存在，请先运行 publish1-build.ps1 生成发布包" -ForegroundColor Red
     exit 1
 }
 
 $ZipFiles = Get-ChildItem -Path $DistPath -Filter "*.zip"
 if ($ZipFiles.Count -eq 0) {
-    Write-Host "dist 目录下没有 ZIP 文件，请先运行 publish.ps1 生成发布包" -ForegroundColor Red
+    Write-Host "dist 目录下没有 ZIP 文件，请先运行 publish1-build.ps1 生成发布包" -ForegroundColor Red
     exit 1
 }
 

@@ -64,6 +64,9 @@ public partial class TabItem : ObservableObject
     [ObservableProperty]
     private bool _isSelected;
 
+    [ObservableProperty]
+    private byte[]? _cachedPngBytes;
+
     public string Title => IsModified ? $"{Header} *" : Header;
 
     public event EventHandler? ContentChanged;

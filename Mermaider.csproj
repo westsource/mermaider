@@ -7,9 +7,10 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\mermaider32.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    <Version>1.0.260429.2</Version>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.260.429</FileVersion>
+    <!-- <PublishTrimmed>true</PublishTrimmed> -->
+    <Version>1.1.260503.0</Version>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.260.503</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,7 +30,7 @@
     <Content Include="Assets\Languages\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="tools\**">
+    <Content Include="tools\**" Exclude="tools\node_modules\**\*.map;tools\node_modules\**\*.d.ts">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

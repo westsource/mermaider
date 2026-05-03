@@ -1,0 +1,4 @@
+<linker>
+  <assembly fullname="WebView.Avalonia" />
+  <assembly fullname="WebView.Avalonia.Desktop" />
+</linker>
