@@ -119,5 +119,11 @@
   "DownloadComplete": "Download Complete!",
   "DownloadCompleteMessage": "Update package saved to:\n{0}\n\nPlease close the application, extract the ZIP file, and replace the existing application files manually.",
   "SkipVersion": "Skip this version",
-  "RemindLater": "Remind me later"
+  "RemindLater": "Remind me later",
+
+  "MenuRecentFilesMore": "More...",
+  "RecentHistoryTitle": "Open History",
+  "RecentHistoryFileName": "File Name",
+  "RecentHistoryOpenTime": "Last Opened",
+  "RecentHistoryNoItems": "No open history"
 }

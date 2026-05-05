@@ -31,7 +31,7 @@
                           ItemsSource="{Binding RecentFiles}">
                     <MenuItem.ItemTemplate>
                         <DataTemplate x:DataType="models:RecentFileItem">
-                            <MenuItem Header="{Binding FileName}" 
+                            <MenuItem Header="{Binding DisplayName}" 
                                       ToolTip.Tip="{Binding FilePath}"
                                       Command="{Binding #root.DataContext.OpenRecentFileCommand}"
                                       CommandParameter="{Binding}"/>

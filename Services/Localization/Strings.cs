@@ -124,6 +124,12 @@ public class Strings
     public string SkipVersion => Get("SkipVersion");
     public string RemindLater => Get("RemindLater");
 
+    public string MenuRecentFilesMore => Get("MenuRecentFilesMore");
+    public string RecentHistoryTitle => Get("RecentHistoryTitle");
+    public string RecentHistoryFileName => Get("RecentHistoryFileName");
+    public string RecentHistoryOpenTime => Get("RecentHistoryOpenTime");
+    public string RecentHistoryNoItems => Get("RecentHistoryNoItems");
+
     public string Get(string key)
     {
         return LocalizationService.Instance.GetString(key);

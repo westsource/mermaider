@@ -119,5 +119,11 @@
   "DownloadComplete": "下载完成！",
   "DownloadCompleteMessage": "更新包已保存至：\n{0}\n\n请关闭应用，解压 ZIP 文件并手动替换现有应用文件。",
   "SkipVersion": "跳过此版本",
-  "RemindLater": "稍后提醒"
+  "RemindLater": "稍后提醒",
+
+  "MenuRecentFilesMore": "更多...",
+  "RecentHistoryTitle": "打开历史",
+  "RecentHistoryFileName": "文件名",
+  "RecentHistoryOpenTime": "打开时间",
+  "RecentHistoryNoItems": "暂无打开历史"
 }

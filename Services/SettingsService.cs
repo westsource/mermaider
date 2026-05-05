@@ -13,6 +13,7 @@ public class AppSettings
     public double PreviewZoom { get; set; } = 1.0;
     public string LastOpenDirectory { get; set; } = string.Empty;
     public List<string> RecentFiles { get; set; } = new();
+    public List<RecentFileEntry> RecentFileHistory { get; set; } = new();
 
     public List<AIModelConfig> ModelConfigs { get; set; } = new();
     public string? SelectedModelId { get; set; }
@@ -261,6 +262,7 @@ public class SettingsService
             Settings.RecentFiles = Settings.RecentFiles.Take(MaxRecentFiles).ToList();
         }
 
+        AddToHistory(filePath);
         Save();
     }
 
@@ -280,5 +282,39 @@ public class SettingsService
             Settings.RecentFiles = validFiles;
             Save();
         }
+    }
+
+    public void AddToHistory(string filePath)
+    {
+        if (string.IsNullOrEmpty(filePath)) return;
+
+        var existing = Settings.RecentFileHistory.FirstOrDefault(e =>
+            string.Equals(e.FilePath, filePath, StringComparison.OrdinalIgnoreCase));
+        if (existing != null)
+        {
+            existing.LastOpenedTime = DateTime.Now;
+        }
+        else
+        {
+            Settings.RecentFileHistory.Add(new RecentFileEntry
+            {
+                FilePath = filePath,
+                LastOpenedTime = DateTime.Now
+            });
+        }
+    }
+
+    public void AddToHistoryAndSave(string filePath)
+    {
+        AddToHistory(filePath);
+        Save();
+    }
+
+    public List<RecentFileEntry> GetHistoryWithExistingFiles()
+    {
+        return Settings.RecentFileHistory
+            .Where(e => File.Exists(e.FilePath))
+            .OrderByDescending(e => e.LastOpenedTime)
+            .ToList();
     }
 }

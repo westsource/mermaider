@@ -230,7 +230,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private AIPanelViewModel? _aiAssistant;
 
-    public bool HasRecentFiles => RecentFiles.Count > 0;
+    public bool HasRecentFiles => RecentFiles.Any(r => !r.IsMoreItem);
 
     public string ZoomText => string.Format(S.ZoomFormat, (int)(PreviewDisplayScale * 100));
 
@@ -306,6 +306,10 @@ public partial class MainViewModel : ViewModelBase
         foreach (var file in settingsService.Settings.RecentFiles)
         {
             RecentFiles.Add(new RecentFileItem(file));
+        }
+        if (RecentFiles.Count > 0)
+        {
+            AppendMoreItem();
         }
         OnPropertyChanged(nameof(HasRecentFiles));
 
@@ -695,9 +699,12 @@ public partial class MainViewModel : ViewModelBase
 
     private async Task<bool> SaveTabAsync(TabItem tab)
     {
-        if (string.IsNullOrEmpty(tab.FilePath))
+        var filePath = tab.FilePath;
+        bool isNewFile = string.IsNullOrEmpty(filePath);
+
+        if (isNewFile)
         {
-            var filePath = await _fileService.SaveFileAsync(tab.Content, tab.Header);
+            filePath = await _fileService.SaveFileAsync(tab.Content, tab.Header);
             if (filePath == null)
             {
                 return false;
@@ -707,11 +714,17 @@ public partial class MainViewModel : ViewModelBase
         }
         else
         {
-            await _fileService.SaveFileToPathAsync(tab.Content, tab.FilePath);
+            await _fileService.SaveFileToPathAsync(tab.Content, filePath!);
         }
 
         tab.IsModified = false;
         tab.UpdateHeader();
+
+        if (isNewFile && !string.IsNullOrEmpty(filePath))
+        {
+            AddToRecentFiles(filePath);
+        }
+
         StatusMessage = S.Saved;
         return true;
     }
@@ -853,6 +866,12 @@ public partial class MainViewModel : ViewModelBase
     {
         if (item == null) return;
 
+        if (item.IsMoreItem)
+        {
+            await ShowRecentHistory();
+            return;
+        }
+
         var filePath = item.FilePath;
         if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
         {
@@ -871,8 +890,28 @@ public partial class MainViewModel : ViewModelBase
         await OpenFileFromPath(filePath);
     }
 
+    [RelayCommand]
+    private async Task ShowRecentHistory()
+    {
+        var history = _settingsService.GetHistoryWithExistingFiles();
+        if (history.Count == 0)
+        {
+            StatusMessage = S.RecentHistoryNoItems;
+            return;
+        }
+
+        var dialog = new RecentHistoryDialog(history);
+        var filePath = await dialog.ShowDialog<string?>(_ownerWindow);
+        if (!string.IsNullOrEmpty(filePath))
+        {
+            await OpenFileFromPath(filePath);
+        }
+    }
+
     private void AddToRecentFiles(string filePath)
     {
+        RemoveMoreItem();
+
         var existing = RecentFiles.FirstOrDefault(r => r.FilePath == filePath);
         if (existing != null)
         {
@@ -887,21 +926,42 @@ public partial class MainViewModel : ViewModelBase
             RecentFiles.RemoveAt(RecentFiles.Count - 1);
         }
 
+        AppendMoreItem();
+
         _settingsService.AddRecentFile(filePath);
         OnPropertyChanged(nameof(HasRecentFiles));
+    }
+
+    private void RemoveMoreItem()
+    {
+        var more = RecentFiles.FirstOrDefault(r => r.IsMoreItem);
+        if (more != null) RecentFiles.Remove(more);
+    }
+
+    private void AppendMoreItem()
+    {
+        RecentFiles.Add(RecentFileItem.CreateMoreItem());
     }
 
     private void RemoveFromRecentFiles(string? filePath)
     {
         if (string.IsNullOrEmpty(filePath)) return;
 
+        RemoveMoreItem();
+
         var item = RecentFiles.FirstOrDefault(r => r.FilePath == filePath);
         if (item != null)
         {
             RecentFiles.Remove(item);
             _settingsService.RemoveRecentFile(filePath);
-            OnPropertyChanged(nameof(HasRecentFiles));
         }
+
+        if (RecentFiles.Count > 0)
+        {
+            AppendMoreItem();
+        }
+
+        OnPropertyChanged(nameof(HasRecentFiles));
     }
 
     [RelayCommand]
