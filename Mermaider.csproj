@@ -8,9 +8,9 @@
     <ApplicationIcon>Assets\mermaider32.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <!-- <PublishTrimmed>true</PublishTrimmed> -->
-    <Version>2.0.260503.3</Version>
+    <Version>2.0.260505.0</Version>
     <AssemblyVersion>2.0.0.0</AssemblyVersion>
-    <FileVersion>2.0.260.503</FileVersion>
+    <FileVersion>2.0.260.505</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

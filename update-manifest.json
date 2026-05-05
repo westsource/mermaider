@@ -1,8 +1,8 @@
-{
-    "version":  "2.0.260503.3",
-    "releaseNotes":  "- 新增中英文国际化支持，自动检测系统语言\n- 新增更新检测与一键下载功能\n- 新增\"使用默认浏览器下载\"选项\n- 新增动态缩放倍数（按元素数自适应）\n- 新增后台异步预生成预览图片\n- 优化预览渲染性能，支持增量 JS 注入更新\n- 优化 AI 助手面板（消息可选、多行输入、可拖拽分隔栏）\n",
-    "zipFileSize":  133059676,
-    "downloadUrl":  "https://github.com/westsource/mermaider/releases/download/v2.0.260503.3/Mermaider-2.0.260503.3-win-x64.zip",
-    "publishedAt":  "2026-05-03T14:31:55.2345287+08:00",
-    "zipFileName":  "Mermaider-2.0.260503.3-win-x64.zip"
+﻿{
+    "version":  "2.0.260505.0",
+    "releaseNotes":  "feat: optimize recent files - add file on first save; add history dialog with More... button\n- update update-manifest.json.\n- ﻿feat: ?????????????????????????\n- 更新readme文件\n- chore: 发布 v2.0.260503.3，更新 manifest 下载指向\n- fix: 修正 manifest 默认 URL 分支名 main→master\n- chore: 更新 manifest 下载指向 GitHub Release\n- chore: 更新构建版本号\n- Merge branch \u0027main\u0027 of https://github.com/westsource/mermaider\n- Initial commit",
+    "zipFileName":  "Mermaider-2.0.260505.0-win-x64.zip",
+    "downloadUrl":  "https://github.com/westsource/mermaider/releases/download/v2.0.260505.0/Mermaider-2.0.260505.0-win-x64.zip",
+    "publishedAt":  "2026-05-05T22:27:51.3868108+08:00",
+    "zipFileSize":  101236776
 }
