@@ -1,6 +1,6 @@
 ﻿{
     "version":  "2.0.260505.0",
-    "releaseNotes":  "feat: optimize recent files - add file on first save; add history dialog with More... button\n- update update-manifest.json.\n- ﻿feat: ?????????????????????????\n- 更新readme文件\n- chore: 发布 v2.0.260503.3，更新 manifest 下载指向\n- fix: 修正 manifest 默认 URL 分支名 main→master\n- chore: 更新 manifest 下载指向 GitHub Release\n- chore: 更新构建版本号\n- Merge branch \u0027main\u0027 of https://github.com/westsource/mermaider\n- Initial commit",
+    "releaseNotes":  "feat: optimize recent files - add file on first save; add history dialog with More... button\n- update update-manifest.json\n- 更新readme文件",
     "zipFileName":  "Mermaider-2.0.260505.0-win-x64.zip",
     "downloadUrl":  "https://github.com/westsource/mermaider/releases/download/v2.0.260505.0/Mermaider-2.0.260505.0-win-x64.zip",
     "publishedAt":  "2026-05-05T22:27:51.3868108+08:00",
