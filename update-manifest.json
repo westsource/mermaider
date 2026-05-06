@@ -1,8 +1,8 @@
 ﻿{
     "version":  "2.0.260506.0",
-    "releaseNotes":  "",
+    "releaseNotes":  "fix: install SearchPanel and fix copy/paste in Find/Replace text boxes\n- Install AvaloniaEdit SearchPanel for find/replace functionality\n- Fix copy/paste not working in Find/Replace input boxes",
     "zipFileSize":  101237565,
-    "downloadUrl":  "",
-    "publishedAt":  "2026-05-06T10:16:42.0300744+08:00",
+    "downloadUrl":  "https://gitee.com/westsource/mermaider/releases/download/v2.0.260506.0/Mermaider-2.0.260506.0-win-x64.zip",
+    "publishedAt":  "2026-05-06T10:37:01+08:00",
     "zipFileName":  "Mermaider-2.0.260506.0-win-x64.zip"
 }
