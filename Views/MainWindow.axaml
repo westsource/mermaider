@@ -133,17 +133,18 @@
                     <Border Grid.Column="0" Background="#FFFFFF" Width="{Binding EditorPanelWidth}" MinWidth="0"
                             IsVisible="{Binding IsEditorVisible}">
                         <Grid RowDefinitions="*,Auto,Auto">
-                            <avaloniaEdit:TextEditor Grid.Row="0" x:Name="CodeEditor"
-                                                     Document="{Binding #root.DataContext.CurrentTab.Document}"
-                                                     SyntaxHighlighting="{Binding MermaidHighlighting}"
-                                                     FontFamily="JetBrains Mono,Cascadia Code,Fira Code,Consolas,Menlo,Monaco,monospace"
-                                                     FontSize="14"
-                                                     Background="#FFFFFF"
-                                                     Foreground="#333333"
-                                                     BorderThickness="0"
-                                                     ShowLineNumbers="True"
-                                                     HorizontalScrollBarVisibility="Auto"
-                                                     VerticalScrollBarVisibility="Auto">
+                             <avaloniaEdit:TextEditor Grid.Row="0" x:Name="CodeEditor"
+                                                      Document="{Binding #root.DataContext.CurrentTab.Document}"
+                                                      SyntaxHighlighting="{Binding MermaidHighlighting}"
+                                                      FontFamily="JetBrains Mono,Cascadia Code,Fira Code,Consolas,Menlo,Monaco,monospace"
+                                                      FontSize="14"
+                                                      Background="#FFFFFF"
+                                                      Foreground="#333333"
+                                                      BorderThickness="0"
+                                                      ShowLineNumbers="True"
+                                                      WordWrap="True"
+                                                      HorizontalScrollBarVisibility="Auto"
+                                                      VerticalScrollBarVisibility="Auto">
                                 <avaloniaEdit:TextEditor.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem Header="{Binding #root.DataContext.MenuUndo}" InputGesture="Ctrl+Z" Command="{Binding #root.DataContext.UndoCommand}" IsEnabled="{Binding #root.DataContext.CanUndoAction}"/>
