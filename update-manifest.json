@@ -1,8 +1,8 @@
 ﻿{
-    "version":  "2.0.260505.0",
-    "releaseNotes":  "feat: optimize recent files - add file on first save; add history dialog with More... button\n- update update-manifest.json\n- 更新readme文件",
-    "zipFileName":  "Mermaider-2.0.260505.0-win-x64.zip",
-    "downloadUrl":  "https://github.com/westsource/mermaider/releases/download/v2.0.260505.0/Mermaider-2.0.260505.0-win-x64.zip",
-    "publishedAt":  "2026-05-05T22:27:51.3868108+08:00",
-    "zipFileSize":  101236776
+    "version":  "2.0.260506.0",
+    "releaseNotes":  "",
+    "zipFileSize":  101237565,
+    "downloadUrl":  "",
+    "publishedAt":  "2026-05-06T10:16:42.0300744+08:00",
+    "zipFileName":  "Mermaider-2.0.260506.0-win-x64.zip"
 }

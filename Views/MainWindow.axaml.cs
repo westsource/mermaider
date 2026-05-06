@@ -14,6 +14,7 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using AvaloniaEdit;
+using AvaloniaEdit.Search;
 using AvaloniaWebView;
 using Mermaider.Models;
 using Mermaider.ViewModels;
@@ -107,6 +108,18 @@ public partial class MainWindow : Window
         return binding;
     }
 
+    private static bool IsChildOfSearchPanel(Visual? visual)
+    {
+        var current = visual;
+        while (current != null)
+        {
+            if (current is SearchPanel)
+                return true;
+            current = current.GetVisualParent();
+        }
+        return false;
+    }
+
     private bool IsCodeEditorFocused()
     {
         if (_codeEditor == null) return false;
@@ -115,10 +128,13 @@ public partial class MainWindow : Window
 #pragma warning restore CS8602
         if (focusedElement == null) return false;
         if (focusedElement is not Visual focused) return false;
-        
+
+        if (IsChildOfSearchPanel(focused))
+            return false;
+
         if (ReferenceEquals(focused, _codeEditor) || ReferenceEquals(focused, _codeEditor.TextArea))
             return true;
-        
+
         var parent = focused.GetVisualParent();
         while (parent != null)
         {
@@ -126,7 +142,7 @@ public partial class MainWindow : Window
                 return true;
             parent = parent.GetVisualParent();
         }
-        
+
         return false;
     }
 
@@ -211,6 +227,7 @@ public partial class MainWindow : Window
 
         if (_codeEditor != null)
         {
+            SearchPanel.Install(_codeEditor);
             _codeEditor.TextChanged += (_, _) => RefreshEditorState();
             _codeEditor.TextArea.SelectionChanged += (_, _) => RefreshEditorState();
             _codeEditor.PropertyChanged += (_, e) =>
