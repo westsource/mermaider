@@ -303,7 +303,7 @@ public partial class MainViewModel : ViewModelBase
         RecentFiles.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasRecentFiles));
 
         _settingsService.CleanInvalidRecentFiles();
-        foreach (var file in settingsService.Settings.RecentFiles)
+        foreach (var file in settingsService.RecentFiles)
         {
             RecentFiles.Add(new RecentFileItem(file));
         }
