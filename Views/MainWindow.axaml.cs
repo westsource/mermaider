@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -46,6 +48,12 @@ public partial class MainWindow : Window
     private DispatcherTimer? _zoomPollTimer;
     private bool _isClosing;
 
+    private Delegate? _webViewAccelKeyHandler;
+
+    [DllImport("user32.dll")]
+    private static extern short GetKeyState(int nVirtKey);
+    private const int VK_CONTROL = 0x11;
+
     private bool _isDraggingSplitter;
     private bool _splitterDragStarted;
     private double _splitterStartX;
@@ -69,6 +77,95 @@ public partial class MainWindow : Window
         AttachPreviewHandlers();
         Closing += OnClosing;
         KeyBindings.AddRange(CreateEditorKeyBindings());
+    }
+
+    private void OnTabPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel) return;
+
+        if (e.Delta.Y < 0)
+        {
+            if (viewModel.SelectedTabIndex < viewModel.Tabs.Count - 1)
+                viewModel.SelectedTabIndex++;
+        }
+        else if (e.Delta.Y > 0)
+        {
+            if (viewModel.SelectedTabIndex > 0)
+                viewModel.SelectedTabIndex--;
+        }
+
+        e.Handled = true;
+    }
+
+    private void HookWebViewAcceleratorKey()
+    {
+        try
+        {
+            var controllerProp = _coreWebView2?.GetType().GetProperty("Controller");
+            var controller = controllerProp?.GetValue(_coreWebView2);
+            if (controller == null) return;
+
+            var evt = controller.GetType().GetEvent("AcceleratorKeyPressed");
+            if (evt == null) return;
+
+            var method = typeof(MainWindow).GetMethod(nameof(OnWebViewAcceleratorKeyPressed),
+                BindingFlags.NonPublic | BindingFlags.Instance, null,
+                [typeof(object), typeof(object)], null);
+            if (method == null) return;
+
+            var delegateType = evt.EventHandlerType!;
+            var invokeMethod = delegateType.GetMethod("Invoke")!;
+            var invokeParams = invokeMethod.GetParameters();
+
+            var senderParam = Expression.Parameter(typeof(object), "sender");
+            var argsParam = Expression.Parameter(invokeParams[1].ParameterType, "args");
+            var callExpr = Expression.Call(Expression.Constant(this), method!,
+                senderParam, Expression.Convert(argsParam, typeof(object)));
+            var lambda = Expression.Lambda(delegateType, callExpr, senderParam, argsParam);
+            _webViewAccelKeyHandler = lambda.Compile();
+            evt.AddEventHandler(controller, _webViewAccelKeyHandler);
+        }
+        catch
+        {
+        }
+    }
+
+    private void OnWebViewAcceleratorKeyPressed(object? sender, object args)
+    {
+        try
+        {
+            var argsType = args.GetType();
+            var keyEventKindProp = argsType.GetProperty("KeyEventKind");
+            var virtualKeyProp = argsType.GetProperty("VirtualKey");
+            var handledProp = argsType.GetProperty("Handled");
+
+            if (keyEventKindProp == null || virtualKeyProp == null || handledProp == null) return;
+
+            var keyEventKind = (int)keyEventKindProp.GetValue(args)!;
+            var virtualKey = (int)(uint)virtualKeyProp.GetValue(args)!;
+
+            // KeyEventKind 0 = KeyDown, only intercept on key down
+            if (keyEventKind != 0) return;
+
+            // VK_S = 0x53
+            if (virtualKey != 0x53) return;
+
+            // Check if Ctrl is held
+            if ((GetKeyState(VK_CONTROL) & 0x8000) == 0) return;
+
+            handledProp.SetValue(args, true);
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (DataContext is MainViewModel viewModel)
+                {
+                    viewModel.SaveFileCommand.Execute(null);
+                }
+            });
+        }
+        catch
+        {
+        }
     }
 
     private List<KeyBinding> CreateEditorKeyBindings()
@@ -872,6 +969,7 @@ public partial class MainWindow : Window
                             {
                                 _coreWebView2ExecuteScriptMethod = _coreWebView2.GetType()
                                     .GetMethod("ExecuteScriptAsync", BindingFlags.Public | BindingFlags.Instance);
+                                HookWebViewAcceleratorKey();
                             }
                             TryApplyPendingWebPreview();
                         }
