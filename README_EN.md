@@ -63,18 +63,20 @@ A local Mermaid diagram editor built with C# Avalonia, featuring code editing, s
 - **AI Model Management** - File → Settings → AI Settings opens a full configuration dialog for adding, editing, and deleting AI model configs:
   - Name, Provider (OpenAI / Azure OpenAI / Ollama / Custom)
   - API Key, Base URL, Model ID
-  - Max Tokens (default 4096), Temperature (default 0.7)
+   - Max Tokens (default 4096, up to 2,000,000), Temperature (default 0.7)
 - **Conversation Storage Path** - Configurable directory for AI conversation history files
 - **Auto-save Layout** - Editor/preview ratio, preview zoom, AI panel state (expanded/collapsed), AI panel height, and other settings automatically saved to `%APPDATA%/Mermaider/settings.json`
 
 ### Update
 - **Auto Check on Startup** - Checks for updates automatically on startup (24-hour cooldown between checks, configurable)
-- **Manual Check** - Help → Check for Updates menu item
+- **Manual Check** - Help → Check for Updates (grouped with About)
+- **Download Updates** - Supports direct download or download via default browser
 - **Download Progress** - Real-time download progress display with percentage and progress bar
 - **Skip Version** - Skip a specific version; won't be prompted again for that version
 
 ### About
-- **Help → About** - Displays application name, description, author (黄超/道荣), and current version
+- **Help → Check for Updates / About** - Grouped together in the same menu section
+- **Help → About** - Displays application name, description, author (道荣/黄超), and current version
 - **Help → Mermaid Documentation** - Opens `https://mermaid.js.org/intro/` in the default web browser
 
 ### UI Features
@@ -207,11 +209,11 @@ Enter or modify Mermaid code in the left editor panel. The right preview area up
 - **Auto Check**: On startup, Mermaider automatically checks for updates (24-hour cooldown)
 - **Skip Version**: Skip a specific version; no further notifications for that version
 - **Manual Check**: Help → Check for Updates
-- **Download**: When an update is available, click "Download Update" with real-time progress display
+- **Download**: When an update is available, choose to download directly or via your default browser
 
 ### About
 
-- Help → About: View application name, description, author, and version
+- Help → About: View application name, description, author (道荣/黄超), and version
 - Help → Mermaid Documentation: Opens Mermaid.js official documentation in your browser
 
 ## Keyboard Shortcuts
