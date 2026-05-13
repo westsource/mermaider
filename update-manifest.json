@@ -1,8 +1,8 @@
 ﻿{
-    "version":  "2.0.260506.0",
-    "releaseNotes":  "fix: install SearchPanel and fix copy/paste in Find/Replace text boxes\n- Install AvaloniaEdit SearchPanel for find/replace functionality\n- Fix copy/paste not working in Find/Replace input boxes",
-    "zipFileSize":  101237565,
-    "downloadUrl":  "https://gitee.com/westsource/mermaider/releases/download/v2.0.260506.0/Mermaider-2.0.260506.0-win-x64.zip",
-    "publishedAt":  "2026-05-06T10:37:01+08:00",
-    "zipFileName":  "Mermaider-2.0.260506.0-win-x64.zip"
+    "version":  "2.0.260513.0",
+    "releaseNotes":  "更新readme\nWebView 预览区域焦点时支持 Ctrl+S 保存，移除标签页左右箭头，保留滚轮切换标签页\n修改AIpanel相关样式\nchore: update manifest for v2.0.260506.0 release\nfix: install SearchPanel and fix copy/paste in Find/Replace text boxes\nrefactor: separate recent files/history into recent-history.json\nchore: fix publish script Gitee API and clean manifest release notes\nchore: bump version to v2.0.260505.0 and update manifest\nfeat: optimize recent files - add file on first save; add history dialog with More... button\nupdate update-manifest.json.\n﻿feat: ?????????????????????????\n更新readme文件\nchore: 发布 v2.0.260503.3，更新 manifest 下载指向\nfix: 修正 manifest 默认 URL 分支名 main→master\nchore: 更新 manifest 下载指向 GitHub Release\nchore: 更新构建版本号\nMerge branch \u0027main\u0027 of https://github.com/westsource/mermaider\nInitial commit\nrefactor: manifest 移至项目根目录，截图移入 screenshots/ 子文件夹\nfeat: 新增更新检测与一键下载功能，版本升级至 2.0\nfeat: 动态缩放倍数（按元素数 15→3.5x）+ 后台异步预生成图片，版本升级至 1.1\nfeat: 添加国际化支持（中英文），语言文件外部化，自动检测系统语言\n在状态栏显示渲染图缩放比例\n将最大缩放改为3000%\n增加发布脚本\n添加界面截图到README文档",
+    "zipFileName":  "Mermaider-2.0.260513.0-win-x64.zip",
+    "downloadUrl":  "https://github.com/westsource/mermaider/releases/download/v2.0.260513.0/Mermaider-2.0.260513.0-win-x64.zip",
+    "publishedAt":  "2026-05-13T19:33:29.4907573+08:00",
+    "zipFileSize":  133079733
 }
