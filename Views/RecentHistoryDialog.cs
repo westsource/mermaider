@@ -17,6 +17,9 @@ public sealed class RecentHistoryDialog : Window
 {
     private static readonly Strings S = Strings.Instance;
     private readonly ListBox _listBox;
+    private readonly TextBox _searchBox;
+    private readonly TextBlock _noResultsText;
+    private readonly List<HistoryListItem> _allItems;
 
     public RecentHistoryDialog(List<RecentFileEntry> history)
     {
@@ -38,9 +41,37 @@ public sealed class RecentHistoryDialog : Window
             Margin = new Thickness(0, 0, 0, 8)
         };
 
+        // Build the full list of items
+        _allItems = history.Select(e => new HistoryListItem
+        {
+            FilePath = e.FilePath,
+            FileName = Path.GetFileName(e.FilePath),
+            LastOpenedDisplay = e.LastOpenedTime.ToString("yyyy-MM-dd HH:mm:ss")
+        }).ToList();
+
+        // Search text box
+        _searchBox = new TextBox
+        {
+            Watermark = S.RecentHistorySearchPlaceholder,
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        _searchBox.TextChanged += OnSearchTextChanged;
+
+        // "No results" label (hidden by default)
+        _noResultsText = new TextBlock
+        {
+            Text = S.RecentHistorySearchNoResults,
+            Foreground = new SolidColorBrush(Color.Parse("#888888")),
+            FontSize = 13,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 24, 0, 0),
+            IsVisible = false
+        };
+
         var listGrid = new Grid
         {
-            RowDefinitions = new RowDefinitions("Auto,*")
+            RowDefinitions = new RowDefinitions("Auto,Auto,*,Auto")
         };
 
         var headerRow = new Border
@@ -69,25 +100,18 @@ public sealed class RecentHistoryDialog : Window
                 }
             }
         };
-        Grid.SetRow(headerRow, 0);
+        Grid.SetRow(headerRow, 1);
 
         _listBox = new ListBox
         {
             BorderThickness = new Thickness(0),
             Background = Brushes.Transparent
         };
-        Grid.SetRow(_listBox, 1);
+        Grid.SetRow(_listBox, 2);
 
         _listBox.DoubleTapped += OnListBoxDoubleTapped;
 
-        var items = history.Select(e => new HistoryListItem
-        {
-            FilePath = e.FilePath,
-            FileName = Path.GetFileName(e.FilePath),
-            LastOpenedDisplay = e.LastOpenedTime.ToString("yyyy-MM-dd HH:mm:ss")
-        }).ToList();
-
-        _listBox.ItemsSource = items;
+        _listBox.ItemsSource = _allItems;
         _listBox.ItemTemplate = new FuncDataTemplate<HistoryListItem>((item, _) =>
         {
             if (item == null) return null;
@@ -121,8 +145,13 @@ public sealed class RecentHistoryDialog : Window
             return grid;
         });
 
+        // Place children in the grid rows
+        Grid.SetRow(_searchBox, 0);
+        listGrid.Children.Add(_searchBox);
         listGrid.Children.Add(headerRow);
         listGrid.Children.Add(_listBox);
+        Grid.SetRow(_noResultsText, 3);
+        listGrid.Children.Add(_noResultsText);
 
         var okButton = new Button
         {
@@ -155,6 +184,28 @@ public sealed class RecentHistoryDialog : Window
         rootPanel.Children.Add(listGrid);
 
         Content = rootPanel;
+    }
+
+    private void OnSearchTextChanged(object? sender, TextChangedEventArgs e)
+    {
+        var filter = _searchBox.Text?.Trim() ?? string.Empty;
+
+        List<HistoryListItem> filtered;
+        if (string.IsNullOrEmpty(filter))
+        {
+            filtered = _allItems;
+        }
+        else
+        {
+            filtered = _allItems
+                .Where(item =>
+                    item.FileName.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+                    item.FilePath.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        _listBox.ItemsSource = filtered;
+        _noResultsText.IsVisible = filtered.Count == 0 && !string.IsNullOrEmpty(filter);
     }
 
     private void OnListBoxDoubleTapped(object? sender, TappedEventArgs e)

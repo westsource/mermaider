@@ -125,5 +125,7 @@
   "RecentHistoryTitle": "Open History",
   "RecentHistoryFileName": "File Name",
   "RecentHistoryOpenTime": "Last Opened",
-  "RecentHistoryNoItems": "No open history"
+  "RecentHistoryNoItems": "No open history",
+  "RecentHistorySearchPlaceholder": "Search file name...",
+  "RecentHistorySearchNoResults": "No matching files"
 }

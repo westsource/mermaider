@@ -128,7 +128,9 @@ public class Strings
     public string RecentHistoryTitle => Get("RecentHistoryTitle");
     public string RecentHistoryFileName => Get("RecentHistoryFileName");
     public string RecentHistoryOpenTime => Get("RecentHistoryOpenTime");
-    public string RecentHistoryNoItems => Get("RecentHistoryNoItems");
+	public string RecentHistoryNoItems => Get("RecentHistoryNoItems");
+	public string RecentHistorySearchPlaceholder => Get("RecentHistorySearchPlaceholder");
+	public string RecentHistorySearchNoResults => Get("RecentHistorySearchNoResults");
 
     public string Get(string key)
     {

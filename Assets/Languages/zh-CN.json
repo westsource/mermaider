@@ -125,5 +125,7 @@
   "RecentHistoryTitle": "打开历史",
   "RecentHistoryFileName": "文件名",
   "RecentHistoryOpenTime": "打开时间",
-  "RecentHistoryNoItems": "暂无打开历史"
+  "RecentHistoryNoItems": "暂无打开历史",
+  "RecentHistorySearchPlaceholder": "搜索文件名...",
+  "RecentHistorySearchNoResults": "无匹配文件"
 }
