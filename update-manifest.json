@@ -1,8 +1,8 @@
 ﻿{
-    "version":  "2.0.260513.0",
-    "releaseNotes":  "- 更新弹窗新增\"使用默认浏览器下载\"按钮\n- 菜单中\"检查更新\"与\"关于\"合并为同一分组\n- 修复更新弹窗中各按钮文字居中问题\n- 降低更新弹窗高度，界面更紧凑\n- 修复关于窗口作者名称顺序\n- 扩大 AI 设置 Max Tokens 范围至 2000000\n- 更新 README 文档\n- WebView 预览区域焦点时支持 Ctrl+S 保存\n- 移除标签页左右箭头，保留滚轮切换标签页\n- 修改 AI 面板相关样式\n- 安装 SearchPanel，修复查找/替换输入框复制粘贴问题\n- 重构最近文件记录存储至 recent-history.json\n- 优化最近文件：首次保存时记录文件、增加历史对话框 More... 按钮",
-    "zipFileName":  "Mermaider-2.0.260513.0-win-x64.zip",
-    "downloadUrl":  "https://github.com/westsource/mermaider/releases/download/v2.0.260513.0/Mermaider-2.0.260513.0-win-x64.zip",
-    "publishedAt":  "2026-05-13T19:33:29.4907573+08:00",
-    "zipFileSize":  133079733
+    "version":  "2.0.260818.0",
+    "releaseNotes":  "fix: 发布包内置 Chrome headless shell 与 Node.js 运行时，渲染错误分类提示\n更新 README：同步最新功能（查找替换、崩溃日志、最近历史搜索、离屏渲染等）\nfeat: add search/filter functionality to RecentHistoryDialog\nfix: 修复 release notes 中的乱码\nchore: bump version to v2.0.260513.0 and update manifest\n更新readme\nWebView 预览区域焦点时支持 Ctrl+S 保存，移除标签页左右箭头，保留滚轮切换标签页\n修改AIpanel相关样式\nchore: update manifest for v2.0.260506.0 release\nfix: install SearchPanel and fix copy/paste in Find/Replace text boxes\nrefactor: separate recent files/history into recent-history.json\nchore: fix publish script Gitee API and clean manifest release notes",
+    "zipFileName":  "Mermaider-2.0.260818.0-win-x64.zip",
+    "downloadUrl":  "https://github.com/westsource/mermaider/releases/download/v2.0.260818.0/Mermaider-2.0.260818.0-win-x64.zip",
+    "publishedAt":  "2026-08-18T10:52:25.3658292+08:00",
+    "zipFileSize":  256291099
 }
