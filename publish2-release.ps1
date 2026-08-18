@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Version,
     [string]$GitHubToken,
     [string]$GiteeToken,
@@ -174,7 +174,7 @@ $CreateBody = @{
 } | ConvertTo-Json -Depth 10
 
 try {
-    $GitHubRelease = Invoke-RestMethod -Uri "$GitHubApi/releases" -Method Post -Body $CreateBody -Headers @{
+    $GitHubRelease = Invoke-RestMethod -Uri "$GitHubApi/releases" -Method Post -Body ([System.Text.Encoding]::UTF8.GetBytes($CreateBody)) -Headers @{
         "Authorization" = "Bearer $GitHubToken"
         "Content-Type" = "application/json"
         "Accept" = "application/vnd.github+json"
@@ -271,7 +271,7 @@ Mermaider 是一款本地 Mermaid 图表编辑器，支持实时预览、语法�
             body = $GiteeReleaseBody
         } | ConvertTo-Json -Depth 10
         try {
-            Invoke-RestMethod -Uri "https://gitee.com/api/v5/repos/$Owner/$Repo/releases/$($ExistingGiteeRelease.id)?access_token=$GiteeToken" -Method Patch -Body $GiteeBody -ContentType "application/json" | Out-Null
+            Invoke-RestMethod -Uri "https://gitee.com/api/v5/repos/$Owner/$Repo/releases/$($ExistingGiteeRelease.id)?access_token=$GiteeToken" -Method Patch -Body ([System.Text.Encoding]::UTF8.GetBytes($GiteeBody)) -ContentType "application/json; charset=utf-8" | Out-Null
             Write-Host "  Gitee Release 更新成功!" -ForegroundColor Green
         }
         catch {
@@ -286,7 +286,7 @@ Mermaider 是一款本地 Mermaid 图表编辑器，支持实时预览、语法�
             target_commitish = "master"
         } | ConvertTo-Json -Depth 10
         try {
-            Invoke-RestMethod -Uri "$GiteeApi" -Method Post -Body $GiteeBody -ContentType "application/json" | Out-Null
+            Invoke-RestMethod -Uri "$GiteeApi" -Method Post -Body ([System.Text.Encoding]::UTF8.GetBytes($GiteeBody)) -ContentType "application/json; charset=utf-8" | Out-Null
             Write-Host "  Gitee Release 创建成功!" -ForegroundColor Green
         }
         catch {
