@@ -19,6 +19,9 @@ public class Strings
     public string ZoomFormat => Get("ZoomFormat");
     public string ErrorFormat => Get("ErrorFormat");
     public string SyntaxErrorFormat => Get("SyntaxErrorFormat");
+    public string RenderErrorFormat => Get("RenderErrorFormat");
+    public string ChromeNotFoundError => Get("ChromeNotFoundError");
+    public string NodeNotFoundError => Get("NodeNotFoundError");
     public string UnknownError => Get("UnknownError");
     public string AICodeApplied => Get("AICodeApplied");
     public string CodeGenerated => Get("CodeGenerated");

@@ -556,11 +556,48 @@ public partial class MainViewModel : ViewModelBase
             && tab.Content == contentSnapshot;
     }
 
+    private enum RenderErrorKind
+    {
+        Syntax,
+        Environment,
+    }
+
+    private static RenderErrorKind ClassifyRenderError(string? rawError)
+    {
+        if (string.IsNullOrWhiteSpace(rawError))
+        {
+            return RenderErrorKind.Environment;
+        }
+
+        // 渲染环境类错误（Chrome 缺失/无法启动、Node 缺失等），与图表语法无关
+        if (rawError.Contains("Could not find Chrome", StringComparison.OrdinalIgnoreCase) ||
+            rawError.Contains("Failed to launch the browser process", StringComparison.OrdinalIgnoreCase) ||
+            rawError.Contains("is not recognized", StringComparison.OrdinalIgnoreCase) ||
+            rawError.Contains("不是内部或外部命令", StringComparison.OrdinalIgnoreCase))
+        {
+            return RenderErrorKind.Environment;
+        }
+
+        return RenderErrorKind.Syntax;
+    }
+
     private static string BuildUserFriendlyError(string? rawError)
     {
         if (string.IsNullOrWhiteSpace(rawError))
         {
             return S.UnknownError;
+        }
+
+        if (rawError.Contains("Could not find Chrome", StringComparison.OrdinalIgnoreCase) ||
+            rawError.Contains("Failed to launch the browser process", StringComparison.OrdinalIgnoreCase))
+        {
+            return S.ChromeNotFoundError;
+        }
+
+        if (rawError.Contains("is not recognized", StringComparison.OrdinalIgnoreCase) ||
+            rawError.Contains("不是内部或外部命令", StringComparison.OrdinalIgnoreCase))
+        {
+            return S.NodeNotFoundError;
         }
 
         var lines = rawError
@@ -612,9 +649,12 @@ public partial class MainViewModel : ViewModelBase
         if (!result.Success || result.ImageData == null)
         {
             var shortError = BuildUserFriendlyError(result.ErrorMessage);
+            var kind = ClassifyRenderError(result.ErrorMessage);
             tab.HasError = true;
             tab.ErrorMessage = shortError;
-            StatusMessage = string.Format(S.SyntaxErrorFormat, shortError);
+            StatusMessage = kind == RenderErrorKind.Environment
+                ? string.Format(S.RenderErrorFormat, shortError)
+                : string.Format(S.SyntaxErrorFormat, shortError);
             return null;
         }
 
